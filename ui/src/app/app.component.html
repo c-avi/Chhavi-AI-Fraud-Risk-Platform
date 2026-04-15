@@ -1,0 +1,110 @@
+<main class="shell">
+  <section class="hero">
+    <div class="hero__content">
+      <p class="eyebrow">AI Fraud Risk Scoring Platform</p>
+      <h1>See suspicious activity sooner and respond with confidence.</h1>
+      <p class="hero__copy">
+        A unified fraud operations workspace for logging transactions, analyzing patterns,
+        scoring risk, and generating auditable alerts across your payment ecosystem.
+      </p>
+
+      <div class="hero__actions">
+        <a class="button button--primary" href="#features">Explore Features</a>
+        <a class="button button--ghost" href="#dashboard">View Dashboard</a>
+      </div>
+
+      <div class="metric-grid">
+        <article class="metric-card" *ngFor="let metric of liveMetrics">
+          <p>{{ metric.label }}</p>
+          <strong>{{ metric.value }}</strong>
+          <span>{{ metric.delta }} this week</span>
+        </article>
+      </div>
+    </div>
+
+    <aside class="hero__panel" id="dashboard">
+      <div class="panel-heading">
+        <div>
+          <p class="panel-label">Live Risk Console</p>
+          <h2>Behavioral scoring overview</h2>
+        </div>
+        <span class="badge">Streaming</span>
+      </div>
+
+      <div class="signal-list">
+        <div class="signal-row" *ngFor="let signal of scoringSignals">
+          <div>
+            <strong>{{ signal.name }}</strong>
+            <p>Active scoring factor</p>
+          </div>
+          <div class="signal-meter">
+            <div class="signal-meter__bar">
+              <span [style.width.%]="signal.value"></span>
+            </div>
+            <strong>{{ signal.value }}</strong>
+          </div>
+        </div>
+      </div>
+
+      <div class="score-highlight">
+        <p>Latest transaction risk score</p>
+        <strong>89 / 100</strong>
+        <span>Triggered by elevated velocity, new device, and regional mismatch.</span>
+      </div>
+    </aside>
+  </section>
+
+  <section class="capabilities" id="features">
+    <div class="section-heading">
+      <p class="eyebrow">Core Features</p>
+      <h2>Built for investigators, analysts, and operations teams.</h2>
+    </div>
+
+    <div class="capability-grid">
+      <article class="capability-card" *ngFor="let card of capabilityCards">
+        <span class="capability-card__accent" [style.background]="card.accent"></span>
+        <h3>{{ card.title }}</h3>
+        <p>{{ card.description }}</p>
+      </article>
+    </div>
+  </section>
+
+  <section class="workspace">
+    <article class="workspace-card">
+      <div class="section-heading section-heading--compact">
+        <p class="eyebrow">Alert Generation</p>
+        <h2>Prioritized investigation queue</h2>
+      </div>
+
+      <div class="alert-list">
+        <div class="alert-row" *ngFor="let alert of alertQueue">
+          <div>
+            <strong>{{ alert.id }}</strong>
+            <p>{{ alert.customer }}</p>
+          </div>
+          <div class="alert-score">
+            <span>Risk {{ alert.score }}</span>
+            <p>{{ alert.status }}</p>
+          </div>
+        </div>
+      </div>
+    </article>
+
+    <article class="workspace-card">
+      <div class="section-heading section-heading--compact">
+        <p class="eyebrow">Audit Reports</p>
+        <h2>Compliance-ready traceability</h2>
+      </div>
+
+      <ul class="audit-list">
+        <li *ngFor="let item of auditPoints">{{ item }}</li>
+      </ul>
+
+      <div class="report-card">
+        <p>Report snapshot</p>
+        <strong>Q2 Fraud Investigation Summary</strong>
+        <span>Includes case history, analyst actions, final risk outcome, and report export trail.</span>
+      </div>
+    </article>
+  </section>
+</main>
