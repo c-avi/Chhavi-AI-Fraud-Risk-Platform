@@ -1,110 +1,140 @@
 <main class="shell">
   <section class="hero">
-    <div class="hero__content">
-      <p class="eyebrow">AI Fraud Risk Scoring Platform</p>
-      <h1>See suspicious activity sooner and respond with confidence.</h1>
-      <p class="hero__copy">
-        A unified fraud operations workspace for logging transactions, analyzing patterns,
-        scoring risk, and generating auditable alerts across your payment ecosystem.
-      </p>
+    <p class="eyebrow">AI Fraud Risk Platform</p>
+    <h1>Secure access for analysts, reviewers, and risk teams.</h1>
+    <p class="hero-copy">
+      Add your team behind authenticated access before exposing decisioning, case
+      workflows, or model insights.
+    </p>
 
-      <div class="hero__actions">
-        <a class="button button--primary" href="#features">Explore Features</a>
-        <a class="button button--ghost" href="#dashboard">View Dashboard</a>
-      </div>
-
-      <div class="metric-grid">
-        <article class="metric-card" *ngFor="let metric of liveMetrics">
-          <p>{{ metric.label }}</p>
-          <strong>{{ metric.value }}</strong>
-          <span>{{ metric.delta }} this week</span>
-        </article>
-      </div>
-    </div>
-
-    <aside class="hero__panel" id="dashboard">
-      <div class="panel-heading">
-        <div>
-          <p class="panel-label">Live Risk Console</p>
-          <h2>Behavioral scoring overview</h2>
-        </div>
-        <span class="badge">Streaming</span>
-      </div>
-
-      <div class="signal-list">
-        <div class="signal-row" *ngFor="let signal of scoringSignals">
-          <div>
-            <strong>{{ signal.name }}</strong>
-            <p>Active scoring factor</p>
-          </div>
-          <div class="signal-meter">
-            <div class="signal-meter__bar">
-              <span [style.width.%]="signal.value"></span>
-            </div>
-            <strong>{{ signal.value }}</strong>
-          </div>
-        </div>
-      </div>
-
-      <div class="score-highlight">
-        <p>Latest transaction risk score</p>
-        <strong>89 / 100</strong>
-        <span>Triggered by elevated velocity, new device, and regional mismatch.</span>
-      </div>
-    </aside>
-  </section>
-
-  <section class="capabilities" id="features">
-    <div class="section-heading">
-      <p class="eyebrow">Core Features</p>
-      <h2>Built for investigators, analysts, and operations teams.</h2>
-    </div>
-
-    <div class="capability-grid">
-      <article class="capability-card" *ngFor="let card of capabilityCards">
-        <span class="capability-card__accent" [style.background]="card.accent"></span>
-        <h3>{{ card.title }}</h3>
-        <p>{{ card.description }}</p>
+    <div class="hero-metrics">
+      <article>
+        <strong>24/7</strong>
+        <span>platform monitoring</span>
+      </article>
+      <article>
+        <strong>Role-ready</strong>
+        <span>built for operators and admins</span>
+      </article>
+      <article>
+        <strong>Fast setup</strong>
+        <span>UI is prepared for API integration</span>
       </article>
     </div>
   </section>
 
-  <section class="workspace">
-    <article class="workspace-card">
-      <div class="section-heading section-heading--compact">
-        <p class="eyebrow">Alert Generation</p>
-        <h2>Prioritized investigation queue</h2>
-      </div>
+  <section class="panel">
+    <div class="mode-switch" aria-label="Authentication mode switch">
+      <button
+        type="button"
+        [class.active]="mode() === 'login'"
+        (click)="setMode('login')"
+      >
+        Login
+      </button>
+      <button
+        type="button"
+        [class.active]="mode() === 'signup'"
+        (click)="setMode('signup')"
+      >
+        Sign up
+      </button>
+    </div>
 
-      <div class="alert-list">
-        <div class="alert-row" *ngFor="let alert of alertQueue">
-          <div>
-            <strong>{{ alert.id }}</strong>
-            <p>{{ alert.customer }}</p>
-          </div>
-          <div class="alert-score">
-            <span>Risk {{ alert.score }}</span>
-            <p>{{ alert.status }}</p>
-          </div>
+    @if (mode() === 'login') {
+      <form class="auth-form" [formGroup]="loginForm" (ngSubmit)="submitLogin()">
+        <div>
+          <label for="login-email">Work email</label>
+          <input id="login-email" type="email" formControlName="email" placeholder="analyst@company.com">
+          @if (hasError('login', 'email', 'required')) {
+            <small>Email is required.</small>
+          }
+          @if (hasError('login', 'email', 'email')) {
+            <small>Enter a valid email address.</small>
+          }
         </div>
-      </div>
-    </article>
 
-    <article class="workspace-card">
-      <div class="section-heading section-heading--compact">
-        <p class="eyebrow">Audit Reports</p>
-        <h2>Compliance-ready traceability</h2>
-      </div>
+        <div>
+          <label for="login-password">Password</label>
+          <input id="login-password" type="password" formControlName="password" placeholder="Minimum 8 characters">
+          @if (hasError('login', 'password', 'required')) {
+            <small>Password is required.</small>
+          }
+          @if (hasError('login', 'password', 'minlength')) {
+            <small>Password must be at least 8 characters.</small>
+          }
+        </div>
 
-      <ul class="audit-list">
-        <li *ngFor="let item of auditPoints">{{ item }}</li>
-      </ul>
+        <button class="submit" type="submit" [disabled]="submitting()">
+          {{ submitting() ? 'Signing in...' : 'Sign in' }}
+        </button>
+      </form>
+    } @else {
+      <form class="auth-form" [formGroup]="signupForm" (ngSubmit)="submitSignup()">
+        <div>
+          <label for="signup-name">Full name</label>
+          <input id="signup-name" type="text" formControlName="fullName" placeholder="Chhavi Sharma">
+          @if (hasError('signup', 'fullName', 'required')) {
+            <small>Full name is required.</small>
+          }
+        </div>
 
-      <div class="report-card">
-        <p>Report snapshot</p>
-        <strong>Q2 Fraud Investigation Summary</strong>
-        <span>Includes case history, analyst actions, final risk outcome, and report export trail.</span>
-      </div>
-    </article>
+        <div>
+          <label for="signup-org">Organization</label>
+          <input id="signup-org" type="text" formControlName="organization" placeholder="Fraud Operations">
+          @if (hasError('signup', 'organization', 'required')) {
+            <small>Organization is required.</small>
+          }
+        </div>
+
+        <div>
+          <label for="signup-email">Work email</label>
+          <input id="signup-email" type="email" formControlName="email" placeholder="lead@company.com">
+          @if (hasError('signup', 'email', 'required')) {
+            <small>Email is required.</small>
+          }
+          @if (hasError('signup', 'email', 'email')) {
+            <small>Enter a valid email address.</small>
+          }
+        </div>
+
+        <div>
+          <label for="signup-password">Password</label>
+          <input id="signup-password" type="password" formControlName="password" placeholder="Minimum 8 characters">
+          @if (hasError('signup', 'password', 'required')) {
+            <small>Password is required.</small>
+          }
+          @if (hasError('signup', 'password', 'minlength')) {
+            <small>Password must be at least 8 characters.</small>
+          }
+        </div>
+
+        <div>
+          <label for="signup-confirm-password">Confirm password</label>
+          <input
+            id="signup-confirm-password"
+            type="password"
+            formControlName="confirmPassword"
+            placeholder="Re-enter password"
+          >
+          @if (hasError('signup', 'confirmPassword', 'required')) {
+            <small>Please confirm your password.</small>
+          }
+          @if (passwordMismatch && signupForm.controls.confirmPassword.touched) {
+            <small>Passwords must match.</small>
+          }
+        </div>
+
+        <button class="submit" type="submit" [disabled]="submitting()">
+          {{ submitting() ? 'Creating account...' : 'Create account' }}
+        </button>
+      </form>
+    }
+
+    @if (status()) {
+      <p class="status" [class.success]="statusTone() === 'success'" [class.error]="statusTone() === 'error'">
+        {{ status() }}
+      </p>
+    }
   </section>
 </main>
