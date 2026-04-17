@@ -1,0 +1,57 @@
+<article class="glass-panel dashboard-block">
+  <h3 class="section-title">Transaction Form</h3>
+  <form class="transaction-form" [formGroup]="form()" (ngSubmit)="formSubmit.emit()">
+    <div class="field">
+      <label for="transactionId">Transaction ID</label>
+      <input id="transactionId" type="text" formControlName="transactionId" placeholder="TXN-22019">
+    </div>
+
+    <div class="field">
+      <label for="customerId">Customer ID</label>
+      <input id="customerId" type="text" formControlName="customerId" placeholder="CUST-44301">
+    </div>
+
+    <div class="field">
+      <label for="amount">Amount</label>
+      <input id="amount" type="number" formControlName="amount" placeholder="2500">
+    </div>
+
+    <div class="field">
+      <label for="merchant">Merchant</label>
+      <input id="merchant" type="text" formControlName="merchant" placeholder="Omega Electronics">
+    </div>
+
+    <div class="field">
+      <label for="channel">Channel</label>
+      <select id="channel" formControlName="channel">
+        <option value="card_present">Card Present</option>
+        <option value="card_not_present">Card Not Present</option>
+        <option value="upi">UPI</option>
+        <option value="net_banking">Net Banking</option>
+      </select>
+    </div>
+
+    <div class="field">
+      <label for="location">Location</label>
+      <input id="location" type="text" formControlName="location" placeholder="New Delhi, IN">
+    </div>
+
+    <button class="submit" type="submit" [disabled]="submitting()">
+      {{ submitting() ? 'Scoring...' : 'Submit Transaction' }}
+    </button>
+  </form>
+
+  @if (status()) {
+    <p class="status" [class.success]="statusTone() === 'success'" [class.error]="statusTone() === 'error'">
+      {{ status() }}
+    </p>
+  }
+
+  @if (result(); as output) {
+    <div class="risk-result">
+      <p>Latest score for <strong>{{ output.transactionId }}</strong></p>
+      <h4>{{ output.riskScore }}</h4>
+      <span class="risk-badge">{{ output.riskLevel }}</span>
+    </div>
+  }
+</article>

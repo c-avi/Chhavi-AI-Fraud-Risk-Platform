@@ -1,0 +1,27 @@
+<article class="glass-panel dashboard-block">
+  <h3 class="section-title">Live Metrics</h3>
+  <div class="metrics-grid">
+    @for (metric of metrics(); track metric.label) {
+      <div class="metric-card">
+        <p>{{ metric.label }}</p>
+        <h3>{{ metric.value }}</h3>
+        <span class="delta" [class.negative]="metric.delta.startsWith('-')">{{ metric.delta }}</span>
+      </div>
+    }
+  </div>
+</article>
+
+<article class="glass-panel dashboard-block">
+  <h3 class="section-title">Alert Snapshot</h3>
+  <div class="alerts-snapshot">
+    @for (alert of alerts().slice(0, 3); track alert.id) {
+      <article class="alert-row">
+        <div>
+          <p class="alert-id">{{ alert.id }}</p>
+          <p class="alert-customer">{{ alert.customer }}</p>
+        </div>
+        <span class="score-pill">{{ alert.score }}</span>
+      </article>
+    }
+  </div>
+</article>

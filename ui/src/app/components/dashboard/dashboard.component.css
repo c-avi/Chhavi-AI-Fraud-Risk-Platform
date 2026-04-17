@@ -1,0 +1,93 @@
+.dashboard-block {
+  padding: 1.25rem;
+}
+
+.glass-panel {
+  border-radius: 24px;
+  backdrop-filter: blur(14px);
+  background: rgba(255, 255, 255, 0.62);
+  border: 1px solid rgba(18, 33, 39, 0.1);
+  box-shadow: 0 10px 30px rgba(14, 36, 43, 0.06);
+}
+
+.section-title {
+  margin: 0 0 1rem;
+  color: #173038;
+}
+
+.metrics-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1rem;
+}
+
+.metric-card {
+  padding: 1.15rem;
+  background: rgba(255, 255, 255, 0.88);
+  border-radius: 18px;
+  border: 1px solid rgba(18, 33, 39, 0.08);
+}
+
+.metric-card p {
+  margin: 0;
+  font-size: 0.9rem;
+  color: #6a8088;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.metric-card h3 {
+  margin: 0.5rem 0;
+  font-size: clamp(1.4rem, 3vw, 2.1rem);
+  color: #173038;
+}
+
+.delta {
+  display: inline-block;
+  font-size: 0.85rem;
+  font-weight: 700;
+  padding: 0.25rem 0.6rem;
+  border-radius: 8px;
+  background: rgba(18, 121, 91, 0.1);
+  color: #14644e;
+}
+
+.delta.negative {
+  background: rgba(183, 63, 46, 0.12);
+  color: #9f3727;
+}
+
+.alerts-snapshot {
+  display: grid;
+  gap: 0.6rem;
+}
+
+.alert-row {
+  border-radius: 12px;
+  padding: 0.8rem;
+  border: 1px solid rgba(18, 33, 39, 0.08);
+  background: rgba(255, 255, 255, 0.84);
+  display: flex;
+  justify-content: space-between;
+}
+
+.alert-id {
+  margin: 0;
+  color: #173038;
+  font-weight: 700;
+}
+
+.alert-customer {
+  margin: 0.25rem 0 0;
+  color: #6a8088;
+}
+
+.score-pill {
+  display: inline-block;
+  border-radius: 999px;
+  background: rgba(240, 127, 79, 0.16);
+  color: #a64f28;
+  padding: 0.25rem 0.55rem;
+  font-weight: 700;
+  height: fit-content;
+}

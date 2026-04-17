@@ -1,0 +1,77 @@
+.dashboard-block {
+  padding: 1.25rem;
+}
+
+.glass-panel {
+  border-radius: 24px;
+  backdrop-filter: blur(14px);
+  background: rgba(255, 255, 255, 0.62);
+  border: 1px solid rgba(18, 33, 39, 0.1);
+  box-shadow: 0 10px 30px rgba(14, 36, 43, 0.06);
+}
+
+.alerts-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.section-title {
+  margin: 0;
+  color: #173038;
+}
+
+.refresh-btn {
+  border: 0;
+  border-radius: 999px;
+  padding: 0.45rem 0.8rem;
+  background: rgba(19, 56, 66, 0.12);
+  color: #173038;
+  cursor: pointer;
+}
+
+.alerts-panel {
+  margin-top: 0.75rem;
+  display: grid;
+  gap: 0.6rem;
+}
+
+.alert-row {
+  border-radius: 12px;
+  padding: 0.8rem;
+  border: 1px solid rgba(18, 33, 39, 0.08);
+  background: rgba(255, 255, 255, 0.84);
+  display: flex;
+  justify-content: space-between;
+  gap: 0.7rem;
+}
+
+.alert-id {
+  margin: 0;
+  color: #173038;
+  font-weight: 700;
+}
+
+.alert-customer {
+  margin: 0.25rem 0 0;
+  color: #6a8088;
+}
+
+.alert-meta {
+  text-align: right;
+}
+
+.alert-meta p {
+  margin: 0.3rem 0 0;
+  color: #173038;
+}
+
+.score-pill {
+  display: inline-block;
+  border-radius: 999px;
+  background: rgba(240, 127, 79, 0.16);
+  color: #a64f28;
+  padding: 0.25rem 0.55rem;
+  font-weight: 700;
+}

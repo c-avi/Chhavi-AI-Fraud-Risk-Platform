@@ -1,0 +1,100 @@
+.dashboard-block {
+  padding: 1.25rem;
+}
+
+.glass-panel {
+  border-radius: 24px;
+  backdrop-filter: blur(14px);
+  background: rgba(255, 255, 255, 0.62);
+  border: 1px solid rgba(18, 33, 39, 0.1);
+  box-shadow: 0 10px 30px rgba(14, 36, 43, 0.06);
+}
+
+.section-title {
+  margin: 0 0 1rem;
+  color: #173038;
+}
+
+.transaction-form {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.field {
+  display: grid;
+  gap: 0.4rem;
+}
+
+label {
+  font-weight: 600;
+  color: #173038;
+}
+
+input,
+select {
+  width: 100%;
+  padding: 0.95rem 1rem;
+  border-radius: 14px;
+  border: 1px solid rgba(18, 33, 39, 0.14);
+  background: rgba(255, 255, 255, 0.86);
+  color: #102027;
+  outline: none;
+}
+
+.submit {
+  margin-top: 0.5rem;
+  padding: 1rem;
+  border-radius: 16px;
+  border: 0;
+  cursor: pointer;
+  background: linear-gradient(135deg, #1d5d67, #133842);
+  color: white;
+  font-weight: 700;
+}
+
+.status {
+  margin: 1rem 0 0;
+  padding: 0.95rem 1rem;
+  border-radius: 14px;
+  background: rgba(18, 33, 39, 0.06);
+  color: #173038;
+}
+
+.status.success {
+  background: rgba(18, 121, 91, 0.12);
+  color: #14644e;
+}
+
+.status.error {
+  background: rgba(183, 63, 46, 0.12);
+  color: #9f3727;
+}
+
+.risk-result {
+  margin-top: 0.9rem;
+  border-radius: 14px;
+  padding: 0.95rem 1rem;
+  background: rgba(20, 100, 78, 0.1);
+}
+
+.risk-result p {
+  margin: 0;
+  color: #173038;
+}
+
+.risk-result h4 {
+  margin: 0.35rem 0;
+  font-size: 2rem;
+  color: #173038;
+}
+
+.risk-badge {
+  display: inline-block;
+  border-radius: 999px;
+  background: rgba(19, 56, 66, 0.12);
+  color: #173038;
+  padding: 0.25rem 0.7rem;
+  font-size: 0.85rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}

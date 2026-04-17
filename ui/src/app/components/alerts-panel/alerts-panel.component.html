@@ -1,0 +1,23 @@
+<article class="glass-panel dashboard-block">
+  <div class="alerts-head">
+    <h3 class="section-title">Alerts Panel</h3>
+    <button type="button" class="refresh-btn" (click)="refresh.emit()" [disabled]="loading()">
+      {{ loading() ? 'Refreshing...' : 'Refresh' }}
+    </button>
+  </div>
+
+  <div class="alerts-panel">
+    @for (alert of alerts(); track alert.id) {
+      <article class="alert-row">
+        <div>
+          <p class="alert-id">{{ alert.id }}</p>
+          <p class="alert-customer">{{ alert.customer }}</p>
+        </div>
+        <div class="alert-meta">
+          <span class="score-pill">{{ alert.score }}</span>
+          <p>{{ alert.status }}</p>
+        </div>
+      </article>
+    }
+  </div>
+</article>
