@@ -1,0 +1,12 @@
+@FraudRiskApi_HostAddress = http://localhost:5257
+
+POST {{FraudRiskApi_HostAddress}}/api/v1/transactions
+Content-Type: application/json
+
+{
+  "amount": 15000,
+  "isNewLocation": true,
+  "transactionsInLastHour": 6
+}
+
+###
