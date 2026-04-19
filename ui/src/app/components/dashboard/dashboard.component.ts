@@ -1,6 +1,6 @@
 import { CommonModule } from '@angular/common';
 import { Component, input } from '@angular/core';
-import { AlertItem } from '../../services/api.service';
+import { AlertItem } from '../../services/transaction.service';
 
 export interface MetricItem {
   label: string;

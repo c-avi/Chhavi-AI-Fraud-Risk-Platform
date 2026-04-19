@@ -1,7 +1,7 @@
 import { CommonModule } from '@angular/common';
 import { Component, inject, signal } from '@angular/core';
 import { ReactiveFormsModule, FormGroup, FormControl, Validators } from '@angular/forms';
-import { ApiService, AlertItem, TransactionPayload, TransactionResponse } from './services/api.service';
+import { AlertItem, TransactionPayload, TransactionResponse, TransactionService } from './services/transaction.service';
 import { DashboardComponent } from './components/dashboard/dashboard.component';
 import { TransactionFormComponent } from './components/transaction-form/transaction-form.component';
 import { AlertsPanelComponent } from './components/alerts-panel/alerts-panel.component';
@@ -14,7 +14,7 @@ import { AlertsPanelComponent } from './components/alerts-panel/alerts-panel.com
   styleUrl: './app.component.css',
 })
 export class AppComponent {
-  private readonly apiService = inject(ApiService);
+  private readonly transactionService = inject(TransactionService);
 
   // --- AUTHENTICATION & NAVIGATION STATE ---
   isLoggedIn = signal(false);
@@ -43,12 +43,10 @@ export class AppComponent {
   });
 
   transactionForm = new FormGroup({
-    transactionId: new FormControl('', [Validators.required]),
-    customerId: new FormControl('', [Validators.required]),
+    userId: new FormControl('', [Validators.required]),
     amount: new FormControl<number | null>(null, [Validators.required, Validators.min(1)]),
-    merchant: new FormControl('', [Validators.required]),
-    channel: new FormControl('card_present', [Validators.required]),
     location: new FormControl('', [Validators.required]),
+    timestamp: new FormControl(this.getDateTimeLocalValue(), [Validators.required]),
   });
 
   // --- AUTHENTICATION METHODS ---
@@ -80,7 +78,6 @@ export class AppComponent {
         this.statusTone.set('success');
         this.submitting.set(false);
         this.isLoggedIn.set(true); // Switches UI to Dashboard
-        this.loadAlerts();
       }, 1500);
     }
   }
@@ -138,9 +135,9 @@ export class AppComponent {
   ];
 
   readonly alertQueue = signal<AlertItem[]>([
-    { id: 'ALT-2048', customer: 'Northbridge Retail', score: 92, status: 'Immediate review' },
-    { id: 'ALT-2054', customer: 'Atlas Payments', score: 86, status: 'Escalated' },
-    { id: 'ALT-2058', customer: 'Halo Commerce', score: 78, status: 'Monitor closely' },
+    { userId: 'user-042', riskScore: 92, riskLevel: 'High', timestamp: new Date(Date.now() - 120000).toISOString() },
+    { userId: 'user-128', riskScore: 65, riskLevel: 'Medium', timestamp: new Date(Date.now() - 240000).toISOString() },
+    { userId: 'user-210', riskScore: 22, riskLevel: 'Low', timestamp: new Date(Date.now() - 360000).toISOString() },
   ]);
 
   readonly auditPoints = [
@@ -156,17 +153,7 @@ export class AppComponent {
 
   loadAlerts(): void {
     this.alertsLoading.set(true);
-    this.apiService.getAlerts().subscribe({
-      next: (alerts) => {
-        if (alerts.length > 0) {
-          this.alertQueue.set(alerts);
-        }
-        this.alertsLoading.set(false);
-      },
-      error: () => {
-        this.alertsLoading.set(false);
-      },
-    });
+    setTimeout(() => this.alertsLoading.set(false), 300);
   }
 
   submitTransaction(): void {
@@ -179,9 +166,20 @@ export class AppComponent {
     this.transactionStatus.set('Submitting transaction for risk scoring...');
     this.transactionStatusTone.set('success');
 
-    const payload = this.transactionForm.getRawValue() as TransactionPayload;
+    const rawPayload = this.transactionForm.getRawValue() as {
+      userId: string;
+      amount: number;
+      location: string;
+      timestamp: string;
+    };
+    const payload: TransactionPayload = {
+      userId: rawPayload.userId,
+      amount: rawPayload.amount,
+      location: rawPayload.location,
+      timestamp: new Date(rawPayload.timestamp).toISOString(),
+    };
 
-    this.apiService.submitTransaction(payload).subscribe({
+    this.transactionService.submitTransaction(payload).subscribe({
       next: (response) => {
         this.transactionResult.set(response);
         this.transactionStatusTone.set('success');
@@ -189,7 +187,16 @@ export class AppComponent {
           `Risk score updated: ${response.riskScore} (${response.riskLevel})`
         );
         this.transactionSubmitting.set(false);
-        this.loadAlerts();
+        this.alertQueue.update((items) => [
+          {
+            userId: payload.userId,
+            riskScore: response.riskScore,
+            riskLevel: response.riskLevel,
+            timestamp: payload.timestamp,
+          },
+          ...items,
+        ]);
+        this.transactionForm.controls.timestamp.setValue(this.getDateTimeLocalValue());
       },
       error: () => {
         this.transactionStatusTone.set('error');
@@ -197,5 +204,11 @@ export class AppComponent {
         this.transactionSubmitting.set(false);
       },
     });
+  }
+
+  private getDateTimeLocalValue(): string {
+    const current = new Date();
+    current.setMinutes(current.getMinutes() - current.getTimezoneOffset());
+    return current.toISOString().slice(0, 16);
   }
 }

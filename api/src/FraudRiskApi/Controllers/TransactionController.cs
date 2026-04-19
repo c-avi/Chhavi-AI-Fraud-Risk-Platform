@@ -8,18 +8,20 @@ namespace FraudRiskApi.Controllers;
 [Route("api/v1/transactions")]
 public sealed class TransactionController : ControllerBase
 {
-    private readonly IFraudScoringEngine _fraudScoringEngine;
+    private readonly IFraudScoringService _fraudScoringService;
 
-    public TransactionController(IFraudScoringEngine fraudScoringEngine)
+    public TransactionController(IFraudScoringService fraudScoringService)
     {
-        _fraudScoringEngine = fraudScoringEngine;
+        _fraudScoringService = fraudScoringService;
     }
 
     [HttpPost]
     [ProducesResponseType(typeof(RiskScoreResponse), StatusCodes.Status200OK)]
-    public ActionResult<RiskScoreResponse> PostTransaction([FromBody] TransactionRequest request)
+    public async Task<ActionResult<RiskScoreResponse>> PostTransaction(
+        [FromBody] TransactionRequest request,
+        CancellationToken cancellationToken)
     {
-        var result = _fraudScoringEngine.CalculateScore(request);
+        var result = await _fraudScoringService.ScoreTransactionAsync(request, cancellationToken);
         return Ok(result);
     }
 }

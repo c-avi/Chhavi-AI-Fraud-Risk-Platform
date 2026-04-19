@@ -1,56 +1,69 @@
 using FraudRiskApi.Models;
+using FraudRiskApi.Repositories;
 using FraudRiskApi.Services;
 
 namespace FraudRiskApi.Tests;
 
-public sealed class FraudScoringEngineTests
+public sealed class FraudScoringServiceTests
 {
-    private readonly FraudScoringEngine _engine = new();
+    private readonly FraudScoringService _service = new(new InMemoryTransactionRepository());
 
     [Fact]
-    public void CalculateScore_AllRulesTriggered_ReturnsSumOfWeights()
+    public async Task ScoreTransactionAsync_AllRulesTriggered_ReturnsSumOfWeights()
     {
+        await _service.ScoreTransactionAsync(new TransactionRequest
+        {
+            UserId = "user-100",
+            Amount = 500m,
+            Location = "Mumbai",
+            Timestamp = DateTime.UtcNow.AddSeconds(-20)
+        });
+
         var request = new TransactionRequest
         {
+            UserId = "user-100",
             Amount = 10_001m,
-            IsNewLocation = true,
-            TransactionsInLastHour = 6
+            Location = "Delhi",
+            Timestamp = DateTime.UtcNow
         };
 
-        var result = _engine.CalculateScore(request);
+        var result = await _service.ScoreTransactionAsync(request);
 
-        Assert.Equal(100, result.Score);
-        Assert.Equal(3, result.AppliedRules.Count);
+        Assert.Equal(100, result.RiskScore);
+        Assert.Equal("High", result.RiskLevel);
     }
 
     [Fact]
-    public void CalculateScore_NoRules_ReturnsZero()
+    public async Task ScoreTransactionAsync_NoRules_ReturnsZero()
     {
         var request = new TransactionRequest
         {
+            UserId = "user-200",
             Amount = 100m,
-            IsNewLocation = false,
-            TransactionsInLastHour = 2
+            Location = "Pune",
+            Timestamp = DateTime.UtcNow
         };
 
-        var result = _engine.CalculateScore(request);
+        var result = await _service.ScoreTransactionAsync(request);
 
-        Assert.Equal(0, result.Score);
-        Assert.Empty(result.AppliedRules);
+        Assert.Equal(0, result.RiskScore);
+        Assert.Equal("Low", result.RiskLevel);
     }
 
     [Fact]
-    public void CalculateScore_HighVelocityAtThreshold_DoesNotAddVelocity()
+    public async Task ScoreTransactionAsync_OnlyHighAmount_ReturnsLowRisk()
     {
         var request = new TransactionRequest
         {
-            Amount = 0m,
-            IsNewLocation = false,
-            TransactionsInLastHour = 5
+            UserId = "user-300",
+            Amount = 15_000m,
+            Location = "Bengaluru",
+            Timestamp = DateTime.UtcNow
         };
 
-        var result = _engine.CalculateScore(request);
+        var result = await _service.ScoreTransactionAsync(request);
 
-        Assert.Equal(0, result.Score);
+        Assert.Equal(30, result.RiskScore);
+        Assert.Equal("Low", result.RiskLevel);
     }
 }

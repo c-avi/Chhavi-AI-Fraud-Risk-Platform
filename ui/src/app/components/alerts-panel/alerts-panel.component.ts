@@ -1,6 +1,6 @@
 import { CommonModule } from '@angular/common';
 import { Component, input, output } from '@angular/core';
-import { AlertItem } from '../../services/api.service';
+import { AlertItem } from '../../services/transaction.service';
 
 @Component({
   selector: 'app-alerts-panel',
@@ -14,4 +14,8 @@ export class AlertsPanelComponent {
   loading = input.required<boolean>();
 
   refresh = output<void>();
+
+  getLevelClass(level: AlertItem['riskLevel']): string {
+    return level.toLowerCase();
+  }
 }

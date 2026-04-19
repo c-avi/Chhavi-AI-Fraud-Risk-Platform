@@ -1,7 +1,7 @@
 import { CommonModule } from '@angular/common';
 import { Component, input, output } from '@angular/core';
 import { FormGroup, ReactiveFormsModule } from '@angular/forms';
-import { TransactionResponse } from '../../services/api.service';
+import { TransactionResponse } from '../../services/transaction.service';
 
 @Component({
   selector: 'app-transaction-form',

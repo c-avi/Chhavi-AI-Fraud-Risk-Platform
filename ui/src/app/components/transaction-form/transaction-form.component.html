@@ -2,13 +2,8 @@
   <h3 class="section-title">Transaction Form</h3>
   <form class="transaction-form" [formGroup]="form()" (ngSubmit)="formSubmit.emit()">
     <div class="field">
-      <label for="transactionId">Transaction ID</label>
-      <input id="transactionId" type="text" formControlName="transactionId" placeholder="TXN-22019">
-    </div>
-
-    <div class="field">
-      <label for="customerId">Customer ID</label>
-      <input id="customerId" type="text" formControlName="customerId" placeholder="CUST-44301">
+      <label for="userId">User ID</label>
+      <input id="userId" type="text" formControlName="userId" placeholder="user-1001">
     </div>
 
     <div class="field">
@@ -17,23 +12,13 @@
     </div>
 
     <div class="field">
-      <label for="merchant">Merchant</label>
-      <input id="merchant" type="text" formControlName="merchant" placeholder="Omega Electronics">
-    </div>
-
-    <div class="field">
-      <label for="channel">Channel</label>
-      <select id="channel" formControlName="channel">
-        <option value="card_present">Card Present</option>
-        <option value="card_not_present">Card Not Present</option>
-        <option value="upi">UPI</option>
-        <option value="net_banking">Net Banking</option>
-      </select>
-    </div>
-
-    <div class="field">
       <label for="location">Location</label>
       <input id="location" type="text" formControlName="location" placeholder="New Delhi, IN">
+    </div>
+
+    <div class="field">
+      <label for="timestamp">Timestamp</label>
+      <input id="timestamp" type="datetime-local" formControlName="timestamp">
     </div>
 
     <button class="submit" type="submit" [disabled]="submitting()">
@@ -49,7 +34,7 @@
 
   @if (result(); as output) {
     <div class="risk-result">
-      <p>Latest score for <strong>{{ output.transactionId }}</strong></p>
+      <p>Latest risk assessment</p>
       <h4>{{ output.riskScore }}</h4>
       <span class="risk-badge">{{ output.riskLevel }}</span>
     </div>

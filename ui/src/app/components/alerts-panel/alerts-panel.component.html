@@ -7,15 +7,15 @@
   </div>
 
   <div class="alerts-panel">
-    @for (alert of alerts(); track alert.id) {
+    @for (alert of alerts(); track alert.timestamp) {
       <article class="alert-row">
         <div>
-          <p class="alert-id">{{ alert.id }}</p>
-          <p class="alert-customer">{{ alert.customer }}</p>
+          <p class="alert-id">{{ alert.userId }}</p>
+          <p class="alert-customer">{{ alert.timestamp | date: 'medium' }}</p>
         </div>
         <div class="alert-meta">
-          <span class="score-pill">{{ alert.score }}</span>
-          <p>{{ alert.status }}</p>
+          <span class="score-pill" [class]=" 'score-pill ' + getLevelClass(alert.riskLevel)">{{ alert.riskScore }}</span>
+          <p>{{ alert.riskLevel }} Risk</p>
         </div>
       </article>
     }

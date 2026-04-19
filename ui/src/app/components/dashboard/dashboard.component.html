@@ -14,13 +14,13 @@
 <article class="glass-panel dashboard-block">
   <h3 class="section-title">Alert Snapshot</h3>
   <div class="alerts-snapshot">
-    @for (alert of alerts().slice(0, 3); track alert.id) {
+    @for (alert of alerts().slice(0, 3); track alert.timestamp) {
       <article class="alert-row">
         <div>
-          <p class="alert-id">{{ alert.id }}</p>
-          <p class="alert-customer">{{ alert.customer }}</p>
+          <p class="alert-id">{{ alert.userId }}</p>
+          <p class="alert-customer">{{ alert.riskLevel }} Risk</p>
         </div>
-        <span class="score-pill">{{ alert.score }}</span>
+        <span class="score-pill">{{ alert.riskScore }}</span>
       </article>
     }
   </div>

@@ -75,3 +75,18 @@
   padding: 0.25rem 0.55rem;
   font-weight: 700;
 }
+
+.score-pill.low {
+  background: rgba(22, 126, 96, 0.18);
+  color: #13684f;
+}
+
+.score-pill.medium {
+  background: rgba(240, 127, 79, 0.2);
+  color: #a64f28;
+}
+
+.score-pill.high {
+  background: rgba(183, 63, 46, 0.2);
+  color: #9f3727;
+}
