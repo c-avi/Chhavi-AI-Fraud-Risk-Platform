@@ -4,27 +4,46 @@
     <div class="field">
       <label for="userId">User ID</label>
       <input id="userId" type="text" formControlName="userId" placeholder="user-1001">
+      @if (isFieldInvalid('userId')) {
+        <small>User ID is required.</small>
+      }
     </div>
 
     <div class="field">
       <label for="amount">Amount</label>
       <input id="amount" type="number" formControlName="amount" placeholder="2500">
+      @if (isFieldInvalid('amount')) {
+        <small>Amount must be a positive number.</small>
+      }
     </div>
 
     <div class="field">
       <label for="location">Location</label>
       <input id="location" type="text" formControlName="location" placeholder="New Delhi, IN">
+      @if (isFieldInvalid('location')) {
+        <small>Location is required.</small>
+      }
     </div>
 
     <div class="field">
       <label for="timestamp">Timestamp</label>
       <input id="timestamp" type="datetime-local" formControlName="timestamp">
+      @if (isFieldInvalid('timestamp')) {
+        <small>Timestamp is required.</small>
+      }
     </div>
 
     <button class="submit" type="submit" [disabled]="submitting()">
       {{ submitting() ? 'Scoring...' : 'Submit Transaction' }}
     </button>
   </form>
+
+  @if (submitting()) {
+    <div class="analyzing-state" aria-live="polite">
+      <span class="spinner" aria-hidden="true"></span>
+      <p>Analyzing transaction using fraud models...</p>
+    </div>
+  }
 
   @if (status()) {
     <p class="status" [class.success]="statusTone() === 'success'" [class.error]="statusTone() === 'error'">
@@ -37,6 +56,13 @@
       <p>Latest risk assessment</p>
       <h4>{{ output.riskScore }}</h4>
       <span class="risk-badge">{{ output.riskLevel }}</span>
+      <div class="risk-meter-track" role="progressbar" [attr.aria-valuenow]="output.riskScore" aria-valuemin="0" aria-valuemax="100">
+        <span
+          class="risk-meter-fill"
+          [class]=" 'risk-meter-fill ' + riskMeterClass(output.riskScore)"
+          [style.width.%]="output.riskScore">
+        </span>
+      </div>
     </div>
   }
 </article>

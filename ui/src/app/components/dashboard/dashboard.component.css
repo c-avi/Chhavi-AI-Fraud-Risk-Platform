@@ -5,14 +5,14 @@
 .glass-panel {
   border-radius: 24px;
   backdrop-filter: blur(14px);
-  background: rgba(255, 255, 255, 0.62);
-  border: 1px solid rgba(18, 33, 39, 0.1);
-  box-shadow: 0 10px 30px rgba(14, 36, 43, 0.06);
+  background: linear-gradient(170deg, rgba(8, 22, 36, 0.9), rgba(14, 30, 45, 0.86));
+  border: 1px solid rgba(94, 123, 150, 0.28);
+  box-shadow: 0 14px 36px rgba(3, 10, 18, 0.45);
 }
 
 .section-title {
   margin: 0 0 1rem;
-  color: #173038;
+  color: #dbeaff;
 }
 
 .metrics-grid {
@@ -23,15 +23,15 @@
 
 .metric-card {
   padding: 1.15rem;
-  background: rgba(255, 255, 255, 0.88);
+  background: rgba(10, 27, 41, 0.68);
   border-radius: 18px;
-  border: 1px solid rgba(18, 33, 39, 0.08);
+  border: 1px solid rgba(96, 127, 157, 0.3);
 }
 
 .metric-card p {
   margin: 0;
   font-size: 0.9rem;
-  color: #6a8088;
+  color: #9db5ca;
   text-transform: uppercase;
   letter-spacing: 0.05em;
 }
@@ -39,7 +39,7 @@
 .metric-card h3 {
   margin: 0.5rem 0;
   font-size: clamp(1.4rem, 3vw, 2.1rem);
-  color: #173038;
+  color: #eef5ff;
 }
 
 .delta {
@@ -48,13 +48,13 @@
   font-weight: 700;
   padding: 0.25rem 0.6rem;
   border-radius: 8px;
-  background: rgba(18, 121, 91, 0.1);
-  color: #14644e;
+  background: rgba(46, 170, 130, 0.2);
+  color: #95f6d8;
 }
 
 .delta.negative {
-  background: rgba(183, 63, 46, 0.12);
-  color: #9f3727;
+  background: rgba(196, 83, 83, 0.2);
+  color: #ffb6b6;
 }
 
 .alerts-snapshot {
@@ -65,29 +65,57 @@
 .alert-row {
   border-radius: 12px;
   padding: 0.8rem;
-  border: 1px solid rgba(18, 33, 39, 0.08);
-  background: rgba(255, 255, 255, 0.84);
+  border: 1px solid rgba(96, 127, 157, 0.3);
+  background: rgba(10, 27, 41, 0.68);
   display: flex;
   justify-content: space-between;
+  align-items: center;
 }
 
 .alert-id {
   margin: 0;
-  color: #173038;
+  color: #eaf2ff;
   font-weight: 700;
 }
 
 .alert-customer {
   margin: 0.25rem 0 0;
-  color: #6a8088;
+  color: #9db5ca;
 }
 
 .score-pill {
   display: inline-block;
   border-radius: 999px;
-  background: rgba(240, 127, 79, 0.16);
-  color: #a64f28;
+  background: rgba(123, 153, 184, 0.2);
+  color: #dbeaff;
   padding: 0.25rem 0.55rem;
   font-weight: 700;
   height: fit-content;
+}
+
+.risk-meter-track {
+  margin-top: 0.55rem;
+  width: 170px;
+  height: 8px;
+  border-radius: 999px;
+  background: rgba(169, 197, 223, 0.22);
+  overflow: hidden;
+}
+
+.risk-meter-fill {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+}
+
+.risk-meter-fill.low {
+  background: linear-gradient(90deg, #2bbc86, #26d49f);
+}
+
+.risk-meter-fill.medium {
+  background: linear-gradient(90deg, #f4b44c, #f88940);
+}
+
+.risk-meter-fill.high {
+  background: linear-gradient(90deg, #f06a57, #db3f62);
 }

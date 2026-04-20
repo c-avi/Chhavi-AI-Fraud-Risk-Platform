@@ -5,14 +5,14 @@
 .glass-panel {
   border-radius: 24px;
   backdrop-filter: blur(14px);
-  background: rgba(255, 255, 255, 0.62);
-  border: 1px solid rgba(18, 33, 39, 0.1);
-  box-shadow: 0 10px 30px rgba(14, 36, 43, 0.06);
+  background: linear-gradient(170deg, rgba(8, 22, 36, 0.9), rgba(14, 30, 45, 0.86));
+  border: 1px solid rgba(94, 123, 150, 0.28);
+  box-shadow: 0 14px 36px rgba(3, 10, 18, 0.45);
 }
 
 .section-title {
   margin: 0 0 1rem;
-  color: #173038;
+  color: #dbeaff;
 }
 
 .transaction-form {
@@ -27,7 +27,7 @@
 
 label {
   font-weight: 600;
-  color: #173038;
+  color: #bdd2e8;
 }
 
 input,
@@ -35,10 +35,16 @@ select {
   width: 100%;
   padding: 0.95rem 1rem;
   border-radius: 14px;
-  border: 1px solid rgba(18, 33, 39, 0.14);
-  background: rgba(255, 255, 255, 0.86);
-  color: #102027;
+  border: 1px solid rgba(96, 127, 157, 0.36);
+  background: rgba(9, 23, 36, 0.74);
+  color: #eaf2ff;
   outline: none;
+}
+
+input:focus,
+select:focus {
+  border-color: rgba(78, 188, 255, 0.78);
+  box-shadow: 0 0 0 4px rgba(78, 188, 255, 0.15);
 }
 
 .submit {
@@ -47,54 +53,118 @@ select {
   border-radius: 16px;
   border: 0;
   cursor: pointer;
-  background: linear-gradient(135deg, #1d5d67, #133842);
-  color: white;
+  background: linear-gradient(135deg, #15a4dc, #1f6dc7);
+  color: #f4fbff;
   font-weight: 700;
+}
+
+.submit:disabled {
+  opacity: 0.7;
+  cursor: wait;
 }
 
 .status {
   margin: 1rem 0 0;
   padding: 0.95rem 1rem;
   border-radius: 14px;
-  background: rgba(18, 33, 39, 0.06);
-  color: #173038;
+  background: rgba(103, 136, 170, 0.18);
+  color: #d6e7fb;
 }
 
 .status.success {
-  background: rgba(18, 121, 91, 0.12);
-  color: #14644e;
+  background: rgba(46, 170, 130, 0.18);
+  color: #95f6d8;
 }
 
 .status.error {
-  background: rgba(183, 63, 46, 0.12);
-  color: #9f3727;
+  background: rgba(196, 83, 83, 0.2);
+  color: #ffb6b6;
 }
 
 .risk-result {
   margin-top: 0.9rem;
   border-radius: 14px;
   padding: 0.95rem 1rem;
-  background: rgba(20, 100, 78, 0.1);
+  background: rgba(17, 37, 56, 0.72);
+  border: 1px solid rgba(98, 132, 168, 0.36);
 }
 
 .risk-result p {
   margin: 0;
-  color: #173038;
+  color: #bdd2e8;
 }
 
 .risk-result h4 {
   margin: 0.35rem 0;
   font-size: 2rem;
-  color: #173038;
+  color: #eef5ff;
 }
 
 .risk-badge {
   display: inline-block;
   border-radius: 999px;
-  background: rgba(19, 56, 66, 0.12);
-  color: #173038;
+  background: rgba(123, 153, 184, 0.2);
+  color: #dbeaff;
   padding: 0.25rem 0.7rem;
   font-size: 0.85rem;
   text-transform: uppercase;
   letter-spacing: 0.04em;
+}
+
+small {
+  color: #ffb6b6;
+}
+
+.analyzing-state {
+  margin-top: 0.9rem;
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  color: #bdd2e8;
+}
+
+.analyzing-state p {
+  margin: 0;
+}
+
+.spinner {
+  width: 18px;
+  height: 18px;
+  border: 2px solid rgba(207, 230, 255, 0.28);
+  border-top-color: #7bd3ff;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+.risk-meter-track {
+  margin-top: 0.7rem;
+  width: 100%;
+  height: 10px;
+  border-radius: 999px;
+  background: rgba(169, 197, 223, 0.22);
+  overflow: hidden;
+}
+
+.risk-meter-fill {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+}
+
+.risk-meter-fill.safe {
+  background: linear-gradient(90deg, #2bbc86, #26d49f);
+}
+
+.risk-meter-fill.warning {
+  background: linear-gradient(90deg, #f4b44c, #f88940);
+}
+
+.risk-meter-fill.critical {
+  background: linear-gradient(90deg, #f06a57, #db3f62);
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
 }

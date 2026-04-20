@@ -19,6 +19,13 @@
         <div>
           <p class="alert-id">{{ alert.userId }}</p>
           <p class="alert-customer">{{ alert.riskLevel }} Risk</p>
+          <div class="risk-meter-track" role="progressbar" [attr.aria-valuenow]="alert.riskScore" aria-valuemin="0" aria-valuemax="100">
+            <span
+              class="risk-meter-fill"
+              [class]=" 'risk-meter-fill ' + riskMeterClass(alert.riskScore)"
+              [style.width.%]="alert.riskScore">
+            </span>
+          </div>
         </div>
         <span class="score-pill">{{ alert.riskScore }}</span>
       </article>

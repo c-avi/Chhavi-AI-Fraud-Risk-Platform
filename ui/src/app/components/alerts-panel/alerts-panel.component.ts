@@ -18,4 +18,16 @@ export class AlertsPanelComponent {
   getLevelClass(level: AlertItem['riskLevel']): string {
     return level.toLowerCase();
   }
+
+  riskMeterClass(score: number): string {
+    if (score >= 75) {
+      return 'high';
+    }
+
+    if (score >= 50) {
+      return 'medium';
+    }
+
+    return 'low';
+  }
 }

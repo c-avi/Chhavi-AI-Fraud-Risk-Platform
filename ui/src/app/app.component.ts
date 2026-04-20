@@ -1,5 +1,6 @@
 import { CommonModule } from '@angular/common';
 import { Component, inject, signal } from '@angular/core';
+import { HttpErrorResponse } from '@angular/common/http';
 import { ReactiveFormsModule, FormGroup, FormControl, Validators } from '@angular/forms';
 import { AlertItem, TransactionPayload, TransactionResponse, TransactionService } from './services/transaction.service';
 import { DashboardComponent } from './components/dashboard/dashboard.component';
@@ -25,6 +26,7 @@ export class AppComponent {
   transactionSubmitting = signal(false);
   transactionStatus = signal('');
   transactionStatusTone = signal<'success' | 'error'>('success');
+  apiErrorMessage = signal('');
   alertsLoading = signal(false);
   transactionResult = signal<TransactionResponse | null>(null);
 
@@ -162,6 +164,7 @@ export class AppComponent {
       return;
     }
 
+    this.apiErrorMessage.set('');
     this.transactionSubmitting.set(true);
     this.transactionStatus.set('Submitting transaction for risk scoring...');
     this.transactionStatusTone.set('success');
@@ -198,12 +201,30 @@ export class AppComponent {
         ]);
         this.transactionForm.controls.timestamp.setValue(this.getDateTimeLocalValue());
       },
-      error: () => {
+      error: (error: HttpErrorResponse) => {
         this.transactionStatusTone.set('error');
         this.transactionStatus.set('Transaction scoring failed. Please retry.');
+        this.apiErrorMessage.set(this.getFriendlyApiErrorMessage(error));
+        this.transactionResult.set(null);
         this.transactionSubmitting.set(false);
       },
     });
+  }
+
+  dismissApiError(): void {
+    this.apiErrorMessage.set('');
+  }
+
+  private getFriendlyApiErrorMessage(error: HttpErrorResponse): string {
+    if (error.status === 0) {
+      return 'Unable to connect to the fraud scoring API. Check that the backend is running on http://localhost:5257.';
+    }
+
+    if (error.status >= 500) {
+      return 'The fraud scoring service is temporarily unavailable. Please retry in a moment.';
+    }
+
+    return 'We could not reach the fraud scoring API. Check that the backend is running on http://localhost:5257 and try again.';
   }
 
   private getDateTimeLocalValue(): string {

@@ -141,6 +141,13 @@
 </main>
 } @else {
   <div class="dashboard-shell">
+    @if (apiErrorMessage()) {
+      <div class="api-alert" role="alert" aria-live="polite">
+        <p>{{ apiErrorMessage() }}</p>
+        <button type="button" (click)="dismissApiError()">Dismiss</button>
+      </div>
+    }
+
     <header class="dashboard-header">
       <h2>AI Fraud Risk Dashboard</h2>
       <button (click)="isLoggedIn.set(false)" class="logout-btn">Log out</button>

@@ -18,4 +18,16 @@ export interface MetricItem {
 export class DashboardComponent {
   metrics = input.required<MetricItem[]>();
   alerts = input.required<AlertItem[]>();
+
+  riskMeterClass(score: number): string {
+    if (score >= 75) {
+      return 'high';
+    }
+
+    if (score >= 50) {
+      return 'medium';
+    }
+
+    return 'low';
+  }
 }

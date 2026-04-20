@@ -18,4 +18,21 @@ export class TransactionFormComponent {
   result = input<TransactionResponse | null>(null);
 
   formSubmit = output<void>();
+
+  isFieldInvalid(fieldName: 'userId' | 'amount' | 'location' | 'timestamp'): boolean {
+    const control = this.form().get(fieldName);
+    return !!(control && control.touched && control.invalid);
+  }
+
+  riskMeterClass(score: number): string {
+    if (score >= 75) {
+      return 'critical';
+    }
+
+    if (score >= 50) {
+      return 'warning';
+    }
+
+    return 'safe';
+  }
 }
