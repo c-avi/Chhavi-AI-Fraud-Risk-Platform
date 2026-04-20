@@ -5,7 +5,7 @@ using Microsoft.AspNetCore.Mvc;
 namespace FraudRiskApi.Controllers;
 
 [ApiController]
-[Route("api/v1/transactions")]
+[Route("api/v1/[controller]")]
 public sealed class TransactionController : ControllerBase
 {
     private readonly IFraudScoringService _fraudScoringService;
