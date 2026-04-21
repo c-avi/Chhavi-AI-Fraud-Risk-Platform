@@ -1,6 +1,8 @@
+using FraudRiskApi.Data;
 using FraudRiskApi.Middleware;
 using FraudRiskApi.Repositories;
 using FraudRiskApi.Services;
+using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -16,7 +18,15 @@ builder.Services.AddCors(options =>
             .AllowAnyMethod();
     });
 });
-builder.Services.AddSingleton<ITransactionRepository, InMemoryTransactionRepository>();
+var connectionString = builder.Configuration.GetConnectionString("DefaultConnection")
+    ?? throw new InvalidOperationException("Connection string 'DefaultConnection' is missing.");
+
+builder.Services.AddDbContext<FraudRiskDbContext>(options =>
+{
+    options.UseSqlServer(connectionString);
+});
+
+builder.Services.AddScoped<ITransactionRepository, SqlTransactionRepository>();
 builder.Services.AddScoped<IFraudScoringService, FraudScoringService>();
 
 var app = builder.Build();
@@ -26,6 +36,12 @@ app.UseMiddleware<ExceptionHandlingMiddleware>();
 if (app.Environment.IsDevelopment())
 {
     app.MapOpenApi();
+}
+
+using (var scope = app.Services.CreateScope())
+{
+    var dbContext = scope.ServiceProvider.GetRequiredService<FraudRiskDbContext>();
+    dbContext.Database.Migrate();
 }
 
 app.UseHttpsRedirection();

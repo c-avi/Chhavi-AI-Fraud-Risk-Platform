@@ -52,15 +52,17 @@ public sealed class FraudScoringService : IFraudScoringService
             UserId = request.UserId,
             Amount = request.Amount,
             Location = request.Location,
-            Timestamp = request.Timestamp
+            Timestamp = request.Timestamp,
+            RiskScore = score,
+            RiskLevel = GetRiskLevel(score)
         };
 
         await _transactionRepository.AddAsync(transaction, cancellationToken);
 
         return new RiskScoreResponse
         {
-            RiskScore = score,
-            RiskLevel = GetRiskLevel(score)
+            RiskScore = transaction.RiskScore,
+            RiskLevel = transaction.RiskLevel
         };
     }
 
