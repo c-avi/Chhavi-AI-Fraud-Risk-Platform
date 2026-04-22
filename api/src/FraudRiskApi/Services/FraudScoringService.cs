@@ -5,47 +5,53 @@ namespace FraudRiskApi.Services;
 
 public sealed class FraudScoringService : IFraudScoringService
 {
-    private const decimal HighAmountThreshold = 10_000m;
-    private const int HighAmountRisk = 30;
-    private const int UnusualLocationRisk = 40;
-    private const int RapidFrequencyRisk = 30;
-
     private readonly ITransactionRepository _transactionRepository;
+    private readonly IFraudRiskModelEngine _fraudRiskModelEngine;
 
-    public FraudScoringService(ITransactionRepository transactionRepository)
+    public FraudScoringService(
+        ITransactionRepository transactionRepository,
+        IFraudRiskModelEngine fraudRiskModelEngine)
     {
         _transactionRepository = transactionRepository;
+        _fraudRiskModelEngine = fraudRiskModelEngine;
     }
 
     public async Task<RiskScoreResponse> ScoreTransactionAsync(TransactionRequest request, CancellationToken cancellationToken = default)
     {
         ValidateRequest(request);
 
-        var score = 0;
-
-        if (request.Amount > HighAmountThreshold)
-        {
-            score += HighAmountRisk;
-        }
-
         var lastTransaction = await _transactionRepository.GetLastTransactionAsync(request.UserId, cancellationToken);
-        if (lastTransaction is not null &&
-            !string.Equals(lastTransaction.Location, request.Location, StringComparison.OrdinalIgnoreCase))
-        {
-            score += UnusualLocationRisk;
-        }
-
-        var fromTimestamp = request.Timestamp.AddMinutes(-1);
-        var transactionCountInWindow = await _transactionRepository.CountTransactionsSinceAsync(
+        var recentWindowStart = request.Timestamp.AddMinutes(-15);
+        var historyWindowStart = request.Timestamp.AddDays(-30);
+        var recentTransactionCount = await _transactionRepository.CountTransactionsSinceAsync(
             request.UserId,
-            fromTimestamp,
+            recentWindowStart,
+            request.Timestamp,
+            cancellationToken);
+        var historicalAverageAmount = await _transactionRepository.GetAverageAmountAsync(
+            request.UserId,
+            historyWindowStart,
+            request.Timestamp,
+            cancellationToken);
+        var distinctLocationCount = await _transactionRepository.CountDistinctLocationsSinceAsync(
+            request.UserId,
+            historyWindowStart,
             request.Timestamp,
             cancellationToken);
 
-        if (transactionCountInWindow > 0)
-        {
-            score += RapidFrequencyRisk;
-        }
+        var assessment = await _fraudRiskModelEngine.EvaluateAsync(
+            new FraudRiskContext
+            {
+                UserId = request.UserId,
+                Amount = request.Amount,
+                Location = request.Location,
+                Timestamp = request.Timestamp,
+                LastTransaction = lastTransaction,
+                RecentTransactionCount = recentTransactionCount,
+                HistoricalAverageAmount = historicalAverageAmount,
+                DistinctLocationCount = distinctLocationCount
+            },
+            cancellationToken);
 
         var transaction = new Transaction
         {
@@ -53,8 +59,8 @@ public sealed class FraudScoringService : IFraudScoringService
             Amount = request.Amount,
             Location = request.Location,
             Timestamp = request.Timestamp,
-            RiskScore = score,
-            RiskLevel = GetRiskLevel(score)
+            RiskScore = assessment.RiskScore,
+            RiskLevel = assessment.RiskLevel
         };
 
         await _transactionRepository.AddAsync(transaction, cancellationToken);
@@ -64,6 +70,24 @@ public sealed class FraudScoringService : IFraudScoringService
             RiskScore = transaction.RiskScore,
             RiskLevel = transaction.RiskLevel
         };
+    }
+
+    public Task<RiskSummaryResponse> GetRiskSummaryAsync(CancellationToken cancellationToken = default) =>
+        _transactionRepository.GetRiskSummaryAsync(cancellationToken);
+
+    public async Task<IReadOnlyList<TransactionAlertResponse>> GetRecentAlertsAsync(int limit = 10, CancellationToken cancellationToken = default)
+    {
+        var transactions = await _transactionRepository.GetRecentTransactionsAsync(limit, cancellationToken);
+
+        return transactions
+            .Select(transaction => new TransactionAlertResponse
+            {
+                UserId = transaction.UserId,
+                RiskScore = transaction.RiskScore,
+                RiskLevel = transaction.RiskLevel,
+                Timestamp = transaction.Timestamp
+            })
+            .ToArray();
     }
 
     private static void ValidateRequest(TransactionRequest request)
@@ -88,12 +112,4 @@ public sealed class FraudScoringService : IFraudScoringService
             throw new ArgumentException("Timestamp is required.");
         }
     }
-
-    private static string GetRiskLevel(int score) =>
-        score switch
-        {
-            >= 70 => "High",
-            >= 40 => "Medium",
-            _ => "Low"
-        };
 }
