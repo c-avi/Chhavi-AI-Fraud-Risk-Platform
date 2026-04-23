@@ -6,5 +6,9 @@ public interface ITransactionRepository
 {
     Task<Transaction?> GetLastTransactionAsync(string userId, CancellationToken cancellationToken = default);
     Task<int> CountTransactionsSinceAsync(string userId, DateTime fromTimestamp, DateTime toTimestamp, CancellationToken cancellationToken = default);
+    Task<decimal> GetAverageAmountAsync(string userId, DateTime fromTimestamp, DateTime toTimestamp, CancellationToken cancellationToken = default);
+    Task<int> CountDistinctLocationsSinceAsync(string userId, DateTime fromTimestamp, DateTime toTimestamp, CancellationToken cancellationToken = default);
+    Task<RiskSummaryResponse> GetRiskSummaryAsync(CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<Transaction>> GetRecentTransactionsAsync(int limit, CancellationToken cancellationToken = default);
     Task AddAsync(Transaction transaction, CancellationToken cancellationToken = default);
 }

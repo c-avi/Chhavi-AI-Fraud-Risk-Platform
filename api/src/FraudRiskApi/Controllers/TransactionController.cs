@@ -24,4 +24,22 @@ public sealed class TransactionController : ControllerBase
         var result = await _fraudScoringService.ScoreTransactionAsync(request, cancellationToken);
         return Ok(result);
     }
+
+    [HttpGet("summary")]
+    [ProducesResponseType(typeof(RiskSummaryResponse), StatusCodes.Status200OK)]
+    public async Task<ActionResult<RiskSummaryResponse>> GetSummary(CancellationToken cancellationToken)
+    {
+        var summary = await _fraudScoringService.GetRiskSummaryAsync(cancellationToken);
+        return Ok(summary);
+    }
+
+    [HttpGet("alerts")]
+    [ProducesResponseType(typeof(IReadOnlyList<TransactionAlertResponse>), StatusCodes.Status200OK)]
+    public async Task<ActionResult<IReadOnlyList<TransactionAlertResponse>>> GetAlerts(
+        [FromQuery] int limit = 10,
+        CancellationToken cancellationToken = default)
+    {
+        var alerts = await _fraudScoringService.GetRecentAlertsAsync(limit, cancellationToken);
+        return Ok(alerts);
+    }
 }

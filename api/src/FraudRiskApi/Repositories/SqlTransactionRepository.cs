@@ -37,6 +37,70 @@ public sealed class SqlTransactionRepository : ITransactionRepository
                 cancellationToken);
     }
 
+    public async Task<decimal> GetAverageAmountAsync(
+        string userId,
+        DateTime fromTimestamp,
+        DateTime toTimestamp,
+        CancellationToken cancellationToken = default)
+    {
+        var amounts = await _dbContext.Transactions
+            .AsNoTracking()
+            .Where(transaction =>
+                transaction.UserId == userId &&
+                transaction.Timestamp >= fromTimestamp &&
+                transaction.Timestamp <= toTimestamp)
+            .Select(transaction => transaction.Amount)
+            .ToListAsync(cancellationToken);
+
+        return amounts.Count == 0 ? 0m : amounts.Average();
+    }
+
+    public Task<int> CountDistinctLocationsSinceAsync(
+        string userId,
+        DateTime fromTimestamp,
+        DateTime toTimestamp,
+        CancellationToken cancellationToken = default)
+    {
+        return _dbContext.Transactions
+            .AsNoTracking()
+            .Where(transaction =>
+                transaction.UserId == userId &&
+                transaction.Timestamp >= fromTimestamp &&
+                transaction.Timestamp <= toTimestamp)
+            .Select(transaction => transaction.Location)
+            .Distinct()
+            .CountAsync(cancellationToken);
+    }
+
+    public async Task<RiskSummaryResponse> GetRiskSummaryAsync(CancellationToken cancellationToken = default)
+    {
+        var totalTransactionsProcessed = await _dbContext.Transactions.CountAsync(cancellationToken);
+        var highRiskAlertsCount = await _dbContext.Transactions.CountAsync(
+            transaction => transaction.RiskLevel == "High",
+            cancellationToken);
+        var averageFraudRiskScore = totalTransactionsProcessed == 0
+            ? 0m
+            : decimal.Round(
+                await _dbContext.Transactions.AverageAsync(transaction => (decimal)transaction.RiskScore, cancellationToken),
+                1);
+
+        return new RiskSummaryResponse
+        {
+            TotalTransactionsProcessed = totalTransactionsProcessed,
+            HighRiskAlertsCount = highRiskAlertsCount,
+            AverageFraudRiskScore = averageFraudRiskScore
+        };
+    }
+
+    public async Task<IReadOnlyList<Transaction>> GetRecentTransactionsAsync(int limit, CancellationToken cancellationToken = default)
+    {
+        return await _dbContext.Transactions
+            .AsNoTracking()
+            .OrderByDescending(transaction => transaction.Timestamp)
+            .Take(limit)
+            .ToListAsync(cancellationToken);
+    }
+
     public async Task AddAsync(Transaction transaction, CancellationToken cancellationToken = default)
     {
         await _dbContext.Transactions.AddAsync(transaction, cancellationToken);
