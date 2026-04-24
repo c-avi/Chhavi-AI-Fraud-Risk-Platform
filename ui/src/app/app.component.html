@@ -154,7 +154,7 @@
     </header>
 
     <section class="dashboard-grid">
-      <app-dashboard [metrics]="liveMetrics" [alerts]="alertQueue()"></app-dashboard>
+      <app-dashboard [summary]="riskSummary()" [alerts]="alertQueue()" [loading]="dashboardLoading()"></app-dashboard>
       <app-transaction-form
         [form]="transactionForm"
         [submitting]="transactionSubmitting()"

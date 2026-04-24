@@ -1,11 +1,10 @@
 import { CommonModule } from '@angular/common';
 import { Component, input } from '@angular/core';
-import { AlertItem } from '../../services/transaction.service';
+import { RiskSummary, TransactionAlert } from '../../services/transaction.service';
 
-export interface MetricItem {
+interface SummaryCard {
   label: string;
   value: string;
-  delta: string;
 }
 
 @Component({
@@ -16,8 +15,32 @@ export interface MetricItem {
   styleUrl: './dashboard.component.css',
 })
 export class DashboardComponent {
-  metrics = input.required<MetricItem[]>();
-  alerts = input.required<AlertItem[]>();
+  summary = input.required<RiskSummary>();
+  alerts = input.required<TransactionAlert[]>();
+  loading = input<boolean>(false);
+
+  summaryCards(): SummaryCard[] {
+    const summary = this.summary();
+
+    return [
+      {
+        label: 'Total Transactions Processed',
+        value: summary.totalTransactionsProcessed.toLocaleString(),
+      },
+      {
+        label: 'High-Risk Alerts Count',
+        value: summary.highRiskAlertsCount.toLocaleString(),
+      },
+      {
+        label: 'Average Fraud Risk Score',
+        value: summary.averageFraudRiskScore.toFixed(1),
+      },
+    ];
+  }
+
+  visibleAlerts(): TransactionAlert[] {
+    return this.alerts().slice(0, 3);
+  }
 
   riskMeterClass(score: number): string {
     if (score >= 75) {

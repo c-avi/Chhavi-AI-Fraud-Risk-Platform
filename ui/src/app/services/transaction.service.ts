@@ -15,11 +15,17 @@ export interface TransactionResponse {
   riskLevel: 'Low' | 'Medium' | 'High';
 }
 
-export interface AlertItem {
+export interface TransactionAlert {
   userId: string;
   riskScore: number;
   riskLevel: 'Low' | 'Medium' | 'High';
   timestamp: string;
+}
+
+export interface RiskSummary {
+  totalTransactionsProcessed: number;
+  highRiskAlertsCount: number;
+  averageFraudRiskScore: number;
 }
 
 @Injectable({
@@ -32,5 +38,13 @@ export class TransactionService {
 
   submitTransaction(payload: TransactionPayload): Observable<TransactionResponse> {
     return this.http.post<TransactionResponse>(this.baseUrl, payload);
+  }
+
+  getRiskSummary(): Observable<RiskSummary> {
+    return this.http.get<RiskSummary>(`${this.baseUrl}/summary`);
+  }
+
+  getAlerts(limit = 10): Observable<TransactionAlert[]> {
+    return this.http.get<TransactionAlert[]>(`${this.baseUrl}/alerts?limit=${limit}`);
   }
 }

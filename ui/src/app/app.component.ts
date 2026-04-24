@@ -2,7 +2,8 @@ import { CommonModule } from '@angular/common';
 import { Component, inject, signal } from '@angular/core';
 import { HttpErrorResponse } from '@angular/common/http';
 import { ReactiveFormsModule, FormGroup, FormControl, Validators } from '@angular/forms';
-import { AlertItem, TransactionPayload, TransactionResponse, TransactionService } from './services/transaction.service';
+import { RiskDashboardService } from './services/risk-dashboard.service';
+import { RiskSummary, TransactionAlert, TransactionPayload, TransactionResponse, TransactionService } from './services/transaction.service';
 import { DashboardComponent } from './components/dashboard/dashboard.component';
 import { TransactionFormComponent } from './components/transaction-form/transaction-form.component';
 import { AlertsPanelComponent } from './components/alerts-panel/alerts-panel.component';
@@ -16,6 +17,7 @@ import { AlertsPanelComponent } from './components/alerts-panel/alerts-panel.com
 })
 export class AppComponent {
   private readonly transactionService = inject(TransactionService);
+  private readonly riskDashboardService = inject(RiskDashboardService);
 
   // --- AUTHENTICATION & NAVIGATION STATE ---
   isLoggedIn = signal(false);
@@ -27,8 +29,15 @@ export class AppComponent {
   transactionStatus = signal('');
   transactionStatusTone = signal<'success' | 'error'>('success');
   apiErrorMessage = signal('');
+  dashboardLoading = signal(false);
   alertsLoading = signal(false);
   transactionResult = signal<TransactionResponse | null>(null);
+  riskSummary = signal<RiskSummary>({
+    totalTransactionsProcessed: 0,
+    highRiskAlertsCount: 0,
+    averageFraudRiskScore: 0,
+  });
+  alertQueue = signal<TransactionAlert[]>([]);
 
   // --- FORMS ---
   loginForm = new FormGroup({
@@ -80,6 +89,7 @@ export class AppComponent {
         this.statusTone.set('success');
         this.submitting.set(false);
         this.isLoggedIn.set(true); // Switches UI to Dashboard
+        this.loadDashboard();
       }, 1500);
     }
   }
@@ -99,13 +109,6 @@ export class AppComponent {
   }
 
   // --- EXISTING DASHBOARD DATA (Preserved) ---
-  readonly liveMetrics = [
-    { label: 'Transactions Processed', value: '1.28M', delta: '+12.4%' },
-    { label: 'High-Risk Alerts', value: '214', delta: '-8.1%' },
-    { label: 'Model Confidence', value: '96.7%', delta: '+2.3%' },
-    { label: 'Audit Coverage', value: '99.1%', delta: '+0.9%' },
-  ];
-
   readonly capabilityCards = [
     {
       title: 'Transaction Logging',
@@ -136,12 +139,6 @@ export class AppComponent {
     { name: 'Merchant Risk', value: 42, state: 'stable' },
   ];
 
-  readonly alertQueue = signal<AlertItem[]>([
-    { userId: 'user-042', riskScore: 92, riskLevel: 'High', timestamp: new Date(Date.now() - 120000).toISOString() },
-    { userId: 'user-128', riskScore: 65, riskLevel: 'Medium', timestamp: new Date(Date.now() - 240000).toISOString() },
-    { userId: 'user-210', riskScore: 22, riskLevel: 'Low', timestamp: new Date(Date.now() - 360000).toISOString() },
-  ]);
-
   readonly auditPoints = [
     'Immutable event timeline for every scored transaction',
     'Analyst notes and actions retained for compliance review',
@@ -155,7 +152,16 @@ export class AppComponent {
 
   loadAlerts(): void {
     this.alertsLoading.set(true);
-    setTimeout(() => this.alertsLoading.set(false), 300);
+    this.transactionService.getAlerts(10).subscribe({
+      next: (alerts) => {
+        this.alertQueue.set(alerts);
+        this.alertsLoading.set(false);
+      },
+      error: (error: HttpErrorResponse) => {
+        this.alertsLoading.set(false);
+        this.apiErrorMessage.set(this.getFriendlyApiErrorMessage(error));
+      },
+    });
   }
 
   submitTransaction(): void {
@@ -190,15 +196,7 @@ export class AppComponent {
           `Risk score updated: ${response.riskScore} (${response.riskLevel})`
         );
         this.transactionSubmitting.set(false);
-        this.alertQueue.update((items) => [
-          {
-            userId: payload.userId,
-            riskScore: response.riskScore,
-            riskLevel: response.riskLevel,
-            timestamp: payload.timestamp,
-          },
-          ...items,
-        ]);
+        this.loadDashboard();
         this.transactionForm.controls.timestamp.setValue(this.getDateTimeLocalValue());
       },
       error: (error: HttpErrorResponse) => {
@@ -215,6 +213,23 @@ export class AppComponent {
     this.apiErrorMessage.set('');
   }
 
+  private loadDashboard(): void {
+    this.dashboardLoading.set(true);
+    this.riskDashboardService.loadDashboard(10).subscribe({
+      next: ({ summary, alerts }) => {
+        this.riskSummary.set(summary);
+        this.alertQueue.set(alerts);
+        this.dashboardLoading.set(false);
+        this.alertsLoading.set(false);
+      },
+      error: (error: HttpErrorResponse) => {
+        this.dashboardLoading.set(false);
+        this.alertsLoading.set(false);
+        this.apiErrorMessage.set(this.getFriendlyApiErrorMessage(error));
+      },
+    });
+  }
+
   private getFriendlyApiErrorMessage(error: HttpErrorResponse): string {
     if (error.status === 0) {
       return 'Unable to connect to the fraud scoring API. Check that the backend is running on http://localhost:5257.';
@@ -224,7 +239,7 @@ export class AppComponent {
       return 'The fraud scoring service is temporarily unavailable. Please retry in a moment.';
     }
 
-    return 'We could not reach the fraud scoring API. Check that the backend is running on http://localhost:5257 and try again.';
+    return error.error?.message ?? 'We could not reach the fraud scoring API. Check that the backend is running on http://localhost:5257 and try again.';
   }
 
   private getDateTimeLocalValue(): string {

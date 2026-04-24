@@ -1,6 +1,6 @@
 import { CommonModule } from '@angular/common';
 import { Component, input, output } from '@angular/core';
-import { AlertItem } from '../../services/transaction.service';
+import { TransactionAlert } from '../../services/transaction.service';
 
 @Component({
   selector: 'app-alerts-panel',
@@ -10,12 +10,12 @@ import { AlertItem } from '../../services/transaction.service';
   styleUrl: './alerts-panel.component.css',
 })
 export class AlertsPanelComponent {
-  alerts = input.required<AlertItem[]>();
+  alerts = input.required<TransactionAlert[]>();
   loading = input.required<boolean>();
 
   refresh = output<void>();
 
-  getLevelClass(level: AlertItem['riskLevel']): string {
+  getLevelClass(level: TransactionAlert['riskLevel']): string {
     return level.toLowerCase();
   }
 

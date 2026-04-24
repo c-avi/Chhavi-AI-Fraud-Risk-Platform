@@ -15,6 +15,22 @@
   color: #dbeaff;
 }
 
+.panel-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.loading-pill {
+  border-radius: 999px;
+  padding: 0.35rem 0.7rem;
+  font-size: 0.8rem;
+  color: #dbeaff;
+  background: rgba(92, 225, 230, 0.16);
+}
+
 .metrics-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
@@ -40,21 +56,6 @@
   margin: 0.5rem 0;
   font-size: clamp(1.4rem, 3vw, 2.1rem);
   color: #eef5ff;
-}
-
-.delta {
-  display: inline-block;
-  font-size: 0.85rem;
-  font-weight: 700;
-  padding: 0.25rem 0.6rem;
-  border-radius: 8px;
-  background: rgba(46, 170, 130, 0.2);
-  color: #95f6d8;
-}
-
-.delta.negative {
-  background: rgba(196, 83, 83, 0.2);
-  color: #ffb6b6;
 }
 
 .alerts-snapshot {

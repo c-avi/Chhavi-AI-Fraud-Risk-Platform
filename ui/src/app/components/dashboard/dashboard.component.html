@@ -1,11 +1,15 @@
 <article class="glass-panel dashboard-block">
-  <h3 class="section-title">Live Metrics</h3>
+  <div class="panel-head">
+    <h3 class="section-title">Risk Summary Cards</h3>
+    @if (loading()) {
+      <span class="loading-pill">Syncing...</span>
+    }
+  </div>
   <div class="metrics-grid">
-    @for (metric of metrics(); track metric.label) {
+    @for (metric of summaryCards(); track metric.label) {
       <div class="metric-card">
         <p>{{ metric.label }}</p>
         <h3>{{ metric.value }}</h3>
-        <span class="delta" [class.negative]="metric.delta.startsWith('-')">{{ metric.delta }}</span>
       </div>
     }
   </div>
@@ -14,7 +18,7 @@
 <article class="glass-panel dashboard-block">
   <h3 class="section-title">Alert Snapshot</h3>
   <div class="alerts-snapshot">
-    @for (alert of alerts().slice(0, 3); track alert.timestamp) {
+    @for (alert of visibleAlerts(); track alert.timestamp) {
       <article class="alert-row">
         <div>
           <p class="alert-id">{{ alert.userId }}</p>
