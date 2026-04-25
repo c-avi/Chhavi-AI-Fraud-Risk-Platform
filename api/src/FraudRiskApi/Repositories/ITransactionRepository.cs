@@ -4,7 +4,12 @@ namespace FraudRiskApi.Repositories;
 
 public interface ITransactionRepository
 {
+    Task<Transaction?> GetByIdAsync(int transactionId, CancellationToken cancellationToken = default);
     Task<Transaction?> GetLastTransactionAsync(string userId, CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<Transaction>> GetByDateRangeAsync(
+        DateTime? fromTimestamp,
+        DateTime? toTimestamp,
+        CancellationToken cancellationToken = default);
     Task<int> CountTransactionsSinceAsync(string userId, DateTime fromTimestamp, DateTime toTimestamp, CancellationToken cancellationToken = default);
     Task<decimal> GetAverageAmountAsync(string userId, DateTime fromTimestamp, DateTime toTimestamp, CancellationToken cancellationToken = default);
     Task<int> CountDistinctLocationsSinceAsync(string userId, DateTime fromTimestamp, DateTime toTimestamp, CancellationToken cancellationToken = default);

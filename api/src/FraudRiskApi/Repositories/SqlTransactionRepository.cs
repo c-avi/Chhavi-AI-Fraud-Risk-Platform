@@ -13,6 +13,13 @@ public sealed class SqlTransactionRepository : ITransactionRepository
         _dbContext = dbContext;
     }
 
+    public Task<Transaction?> GetByIdAsync(int transactionId, CancellationToken cancellationToken = default)
+    {
+        return _dbContext.Transactions
+            .AsNoTracking()
+            .FirstOrDefaultAsync(transaction => transaction.TransactionId == transactionId, cancellationToken);
+    }
+
     public Task<Transaction?> GetLastTransactionAsync(string userId, CancellationToken cancellationToken = default)
     {
         return _dbContext.Transactions
@@ -20,6 +27,30 @@ public sealed class SqlTransactionRepository : ITransactionRepository
             .Where(transaction => transaction.UserId == userId)
             .OrderByDescending(transaction => transaction.Timestamp)
             .FirstOrDefaultAsync(cancellationToken);
+    }
+
+    public async Task<IReadOnlyList<Transaction>> GetByDateRangeAsync(
+        DateTime? fromTimestamp,
+        DateTime? toTimestamp,
+        CancellationToken cancellationToken = default)
+    {
+        var query = _dbContext.Transactions
+            .AsNoTracking()
+            .AsQueryable();
+
+        if (fromTimestamp.HasValue)
+        {
+            query = query.Where(transaction => transaction.Timestamp >= fromTimestamp.Value);
+        }
+
+        if (toTimestamp.HasValue)
+        {
+            query = query.Where(transaction => transaction.Timestamp <= toTimestamp.Value);
+        }
+
+        return await query
+            .OrderByDescending(transaction => transaction.Timestamp)
+            .ToListAsync(cancellationToken);
     }
 
     public Task<int> CountTransactionsSinceAsync(

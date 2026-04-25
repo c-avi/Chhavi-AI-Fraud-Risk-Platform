@@ -8,6 +8,20 @@ public sealed class InMemoryTransactionRepository : ITransactionRepository
     private readonly ConcurrentDictionary<string, List<Transaction>> _transactionsByUser = new(StringComparer.OrdinalIgnoreCase);
     private readonly Lock _sync = new();
 
+    public Task<Transaction?> GetByIdAsync(int transactionId, CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+
+        lock (_sync)
+        {
+            var transaction = _transactionsByUser.Values
+                .SelectMany(entries => entries)
+                .FirstOrDefault(entry => entry.TransactionId == transactionId);
+
+            return Task.FromResult(transaction);
+        }
+    }
+
     public Task<Transaction?> GetLastTransactionAsync(string userId, CancellationToken cancellationToken = default)
     {
         cancellationToken.ThrowIfCancellationRequested();
@@ -21,6 +35,27 @@ public sealed class InMemoryTransactionRepository : ITransactionRepository
 
             var lastTransaction = entries.MaxBy(transaction => transaction.Timestamp);
             return Task.FromResult(lastTransaction);
+        }
+    }
+
+    public Task<IReadOnlyList<Transaction>> GetByDateRangeAsync(
+        DateTime? fromTimestamp,
+        DateTime? toTimestamp,
+        CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+
+        lock (_sync)
+        {
+            var transactions = _transactionsByUser.Values
+                .SelectMany(entries => entries)
+                .Where(transaction =>
+                    (!fromTimestamp.HasValue || transaction.Timestamp >= fromTimestamp.Value) &&
+                    (!toTimestamp.HasValue || transaction.Timestamp <= toTimestamp.Value))
+                .OrderByDescending(transaction => transaction.Timestamp)
+                .ToArray();
+
+            return Task.FromResult<IReadOnlyList<Transaction>>(transactions);
         }
     }
 
@@ -101,25 +136,23 @@ public sealed class InMemoryTransactionRepository : ITransactionRepository
     }
 
     public Task<RiskSummaryResponse> GetRiskSummaryAsync(CancellationToken cancellationToken = default)
-{
-    cancellationToken.ThrowIfCancellationRequested();
-
-    lock (_sync)
     {
-        var allTransactions = _transactionsByUser.Values.SelectMany(entries => entries).ToArray();
+        cancellationToken.ThrowIfCancellationRequested();
 
-        return Task.FromResult(new RiskSummaryResponse
+        lock (_sync)
         {
-            TotalTransactionsProcessed = allTransactions.Length,
-            HighRiskAlertsCount = allTransactions.Count(transaction => string.Equals(transaction.RiskLevel, "High", StringComparison.OrdinalIgnoreCase)),
-            
-            // FIX: Cast the double result of Average to decimal before rounding
-            AverageFraudRiskScore = allTransactions.Length == 0 
-                ? 0m 
-                : decimal.Round((decimal)allTransactions.Average(transaction => transaction.RiskScore), 1)
-        });
+            var allTransactions = _transactionsByUser.Values.SelectMany(entries => entries).ToArray();
+
+            return Task.FromResult(new RiskSummaryResponse
+            {
+                TotalTransactionsProcessed = allTransactions.Length,
+                HighRiskAlertsCount = allTransactions.Count(transaction => string.Equals(transaction.RiskLevel, "High", StringComparison.OrdinalIgnoreCase)),
+                AverageFraudRiskScore = allTransactions.Length == 0
+                    ? 0m
+                    : decimal.Round((decimal)allTransactions.Average(transaction => transaction.RiskScore), 1)
+            });
+        }
     }
-}
 
     public Task<IReadOnlyList<Transaction>> GetRecentTransactionsAsync(int limit, CancellationToken cancellationToken = default)
     {
