@@ -40,18 +40,11 @@ public sealed class ReportingService : IReportingService
             throw new ArgumentException("fromTimestamp must be earlier than or equal to toTimestamp.");
         }
 
-        var normalizedRiskLevel = string.IsNullOrWhiteSpace(riskLevel)
-            ? null
-            : riskLevel.Trim();
-
-        var transactions = await _transactionRepository.GetByDateRangeAsync(fromTimestamp, toTimestamp, cancellationToken);
-
-        if (normalizedRiskLevel is not null)
-        {
-            transactions = transactions
-                .Where(transaction => string.Equals(transaction.RiskLevel, normalizedRiskLevel, StringComparison.OrdinalIgnoreCase))
-                .ToArray();
-        }
+        var transactions = await _transactionRepository.GetReportTransactionsAsync(
+            fromTimestamp,
+            toTimestamp,
+            riskLevel,
+            cancellationToken);
 
         return transactions
             .Select(MapToResponse)

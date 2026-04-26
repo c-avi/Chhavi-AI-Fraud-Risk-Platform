@@ -53,6 +53,37 @@ public sealed class SqlTransactionRepository : ITransactionRepository
             .ToListAsync(cancellationToken);
     }
 
+    public async Task<IReadOnlyList<Transaction>> GetReportTransactionsAsync(
+        DateTime? fromTimestamp,
+        DateTime? toTimestamp,
+        string? riskLevel,
+        CancellationToken cancellationToken = default)
+    {
+        var query = _dbContext.Transactions
+            .AsNoTracking()
+            .AsQueryable();
+
+        if (fromTimestamp.HasValue)
+        {
+            query = query.Where(transaction => transaction.Timestamp >= fromTimestamp.Value);
+        }
+
+        if (toTimestamp.HasValue)
+        {
+            query = query.Where(transaction => transaction.Timestamp <= toTimestamp.Value);
+        }
+
+        if (!string.IsNullOrWhiteSpace(riskLevel))
+        {
+            var normalizedRiskLevel = riskLevel.Trim();
+            query = query.Where(transaction => transaction.RiskLevel == normalizedRiskLevel);
+        }
+
+        return await query
+            .OrderByDescending(transaction => transaction.Timestamp)
+            .ToListAsync(cancellationToken);
+    }
+
     public Task<int> CountTransactionsSinceAsync(
         string userId,
         DateTime fromTimestamp,

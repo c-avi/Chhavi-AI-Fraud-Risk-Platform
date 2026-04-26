@@ -59,6 +59,34 @@ public sealed class InMemoryTransactionRepository : ITransactionRepository
         }
     }
 
+    public Task<IReadOnlyList<Transaction>> GetReportTransactionsAsync(
+        DateTime? fromTimestamp,
+        DateTime? toTimestamp,
+        string? riskLevel,
+        CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+
+        var normalizedRiskLevel = string.IsNullOrWhiteSpace(riskLevel)
+            ? null
+            : riskLevel.Trim();
+
+        lock (_sync)
+        {
+            var transactions = _transactionsByUser.Values
+                .SelectMany(entries => entries)
+                .Where(transaction =>
+                    (!fromTimestamp.HasValue || transaction.Timestamp >= fromTimestamp.Value) &&
+                    (!toTimestamp.HasValue || transaction.Timestamp <= toTimestamp.Value) &&
+                    (normalizedRiskLevel is null ||
+                     string.Equals(transaction.RiskLevel, normalizedRiskLevel, StringComparison.OrdinalIgnoreCase)))
+                .OrderByDescending(transaction => transaction.Timestamp)
+                .ToArray();
+
+            return Task.FromResult<IReadOnlyList<Transaction>>(transactions);
+        }
+    }
+
     public Task<int> CountTransactionsSinceAsync(
         string userId,
         DateTime fromTimestamp,

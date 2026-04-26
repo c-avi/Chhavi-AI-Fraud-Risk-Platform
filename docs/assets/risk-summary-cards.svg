@@ -1,0 +1,52 @@
+<svg width="1280" height="720" viewBox="0 0 1280 720" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="1280" height="720" rx="32" fill="#0B1622"/>
+  <circle cx="174" cy="136" r="180" fill="url(#paint0_radial)" fill-opacity="0.7"/>
+  <circle cx="1120" cy="102" r="150" fill="url(#paint1_radial)" fill-opacity="0.55"/>
+  <rect x="64" y="56" width="1152" height="88" rx="28" fill="#112233" stroke="#29445B"/>
+  <text x="108" y="108" fill="#EFF7FF" font-family="Segoe UI, Arial, sans-serif" font-size="34" font-weight="700">AI Fraud Risk Dashboard</text>
+  <text x="108" y="134" fill="#90A9BF" font-family="Segoe UI, Arial, sans-serif" font-size="18">Live API-backed risk summary cards and alert monitoring</text>
+  <rect x="64" y="184" width="360" height="180" rx="28" fill="#112638" stroke="#35516B"/>
+  <rect x="460" y="184" width="360" height="180" rx="28" fill="#112638" stroke="#35516B"/>
+  <rect x="856" y="184" width="360" height="180" rx="28" fill="#112638" stroke="#35516B"/>
+  <text x="96" y="230" fill="#9FBDD5" font-family="Segoe UI, Arial, sans-serif" font-size="18">Total Transactions Processed</text>
+  <text x="96" y="300" fill="#F3FBFF" font-family="Segoe UI, Arial, sans-serif" font-size="64" font-weight="700">12,480</text>
+  <text x="492" y="230" fill="#9FBDD5" font-family="Segoe UI, Arial, sans-serif" font-size="18">High-Risk Alerts Count</text>
+  <text x="492" y="300" fill="#FFD1C1" font-family="Segoe UI, Arial, sans-serif" font-size="64" font-weight="700">182</text>
+  <text x="888" y="230" fill="#9FBDD5" font-family="Segoe UI, Arial, sans-serif" font-size="18">Average Fraud Risk Score</text>
+  <text x="888" y="300" fill="#B8FFE1" font-family="Segoe UI, Arial, sans-serif" font-size="64" font-weight="700">47.6</text>
+  <rect x="64" y="404" width="552" height="248" rx="28" fill="#102232" stroke="#2B475F"/>
+  <text x="96" y="450" fill="#EFF7FF" font-family="Segoe UI, Arial, sans-serif" font-size="26" font-weight="700">Recent Alert Snapshot</text>
+  <rect x="96" y="482" width="488" height="44" rx="16" fill="#173247"/>
+  <rect x="96" y="542" width="488" height="44" rx="16" fill="#173247"/>
+  <rect x="96" y="602" width="488" height="44" rx="16" fill="#173247"/>
+  <text x="122" y="510" fill="#EFF7FF" font-family="Segoe UI, Arial, sans-serif" font-size="18">user-410</text>
+  <text x="122" y="570" fill="#EFF7FF" font-family="Segoe UI, Arial, sans-serif" font-size="18">user-128</text>
+  <text x="122" y="630" fill="#EFF7FF" font-family="Segoe UI, Arial, sans-serif" font-size="18">user-071</text>
+  <rect x="504" y="493" width="56" height="22" rx="11" fill="#7A2334"/>
+  <rect x="504" y="553" width="56" height="22" rx="11" fill="#80531B"/>
+  <rect x="504" y="613" width="56" height="22" rx="11" fill="#1D6A4A"/>
+  <text x="521" y="509" fill="#FFDDE4" font-family="Segoe UI, Arial, sans-serif" font-size="14" font-weight="700">91</text>
+  <text x="521" y="569" fill="#FFE1B8" font-family="Segoe UI, Arial, sans-serif" font-size="14" font-weight="700">63</text>
+  <text x="521" y="629" fill="#CFFFE5" font-family="Segoe UI, Arial, sans-serif" font-size="14" font-weight="700">24</text>
+  <rect x="656" y="404" width="560" height="248" rx="28" fill="#102232" stroke="#2B475F"/>
+  <text x="688" y="450" fill="#EFF7FF" font-family="Segoe UI, Arial, sans-serif" font-size="26" font-weight="700">Scoring Signals</text>
+  <text x="688" y="495" fill="#9FBDD5" font-family="Segoe UI, Arial, sans-serif" font-size="18">Frequency anomaly</text>
+  <rect x="688" y="510" width="496" height="16" rx="8" fill="#214059"/>
+  <rect x="688" y="510" width="372" height="16" rx="8" fill="#4FD1C5"/>
+  <text x="688" y="565" fill="#9FBDD5" font-family="Segoe UI, Arial, sans-serif" font-size="18">Location deviation</text>
+  <rect x="688" y="580" width="496" height="16" rx="8" fill="#214059"/>
+  <rect x="688" y="580" width="322" height="16" rx="8" fill="#F59E66"/>
+  <text x="688" y="635" fill="#9FBDD5" font-family="Segoe UI, Arial, sans-serif" font-size="18">Amount deviation</text>
+  <rect x="688" y="650" width="496" height="16" rx="8" fill="#214059"/>
+  <rect x="688" y="650" width="266" height="16" rx="8" fill="#86E6AE"/>
+  <defs>
+    <radialGradient id="paint0_radial" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(174 136) rotate(90) scale(180)">
+      <stop stop-color="#31C7D5"/>
+      <stop offset="1" stop-color="#31C7D5" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="paint1_radial" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(1120 102) rotate(90) scale(150)">
+      <stop stop-color="#FF8F6B"/>
+      <stop offset="1" stop-color="#FF8F6B" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+</svg>

@@ -6,6 +6,11 @@ public interface ITransactionRepository
 {
     Task<Transaction?> GetByIdAsync(int transactionId, CancellationToken cancellationToken = default);
     Task<Transaction?> GetLastTransactionAsync(string userId, CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<Transaction>> GetReportTransactionsAsync(
+        DateTime? fromTimestamp,
+        DateTime? toTimestamp,
+        string? riskLevel,
+        CancellationToken cancellationToken = default);
     Task<IReadOnlyList<Transaction>> GetByDateRangeAsync(
         DateTime? fromTimestamp,
         DateTime? toTimestamp,

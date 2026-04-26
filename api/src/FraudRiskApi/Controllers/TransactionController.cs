@@ -5,14 +5,19 @@ using Microsoft.AspNetCore.Mvc;
 namespace FraudRiskApi.Controllers;
 
 [ApiController]
-[Route("api/v1/[controller]")]
+[Route("api/v1/transactions")]
+[Route("api/v1/transaction")]
 public sealed class TransactionController : ControllerBase
 {
     private readonly IFraudScoringService _fraudScoringService;
+    private readonly IReportingService _reportingService;
 
-    public TransactionController(IFraudScoringService fraudScoringService)
+    public TransactionController(
+        IFraudScoringService fraudScoringService,
+        IReportingService reportingService)
     {
         _fraudScoringService = fraudScoringService;
+        _reportingService = reportingService;
     }
 
     [HttpPost]
@@ -23,6 +28,34 @@ public sealed class TransactionController : ControllerBase
     {
         var result = await _fraudScoringService.ScoreTransactionAsync(request, cancellationToken);
         return Ok(result);
+    }
+
+    [HttpGet("{id:int}")]
+    [ProducesResponseType(typeof(TransactionResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<ActionResult<TransactionResponse>> GetTransactionById(
+        [FromRoute] int id,
+        CancellationToken cancellationToken)
+    {
+        var transaction = await _reportingService.GetTransactionByIdAsync(id, cancellationToken);
+        return Ok(transaction);
+    }
+
+    [HttpGet("/api/v1/reports")]
+    [ProducesResponseType(typeof(IReadOnlyList<TransactionResponse>), StatusCodes.Status200OK)]
+    public async Task<ActionResult<IReadOnlyList<TransactionResponse>>> GetReport(
+        [FromQuery] DateTime? fromTimestamp,
+        [FromQuery] DateTime? toTimestamp,
+        [FromQuery] string? riskLevel,
+        CancellationToken cancellationToken)
+    {
+        var transactions = await _reportingService.GetTransactionsReportAsync(
+            fromTimestamp,
+            toTimestamp,
+            riskLevel,
+            cancellationToken);
+
+        return Ok(transactions);
     }
 
     [HttpGet("summary")]
