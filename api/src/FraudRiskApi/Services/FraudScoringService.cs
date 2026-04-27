@@ -67,6 +67,7 @@ public sealed class FraudScoringService : IFraudScoringService
 
         return new RiskScoreResponse
         {
+            TransactionId = transaction.TransactionId,
             RiskScore = transaction.RiskScore,
             RiskLevel = transaction.RiskLevel
         };

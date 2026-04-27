@@ -1,9 +1,9 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { Observable } from 'rxjs';
+import { Observable, catchError, throwError } from 'rxjs';
 import { environment } from '../../environments/environment';
 
-export interface TransactionPayload {
+export interface TransactionRequest {
   userId: string;
   amount: number;
   location: string;
@@ -11,6 +11,7 @@ export interface TransactionPayload {
 }
 
 export interface TransactionResponse {
+  transactionId: number;
   riskScore: number;
   riskLevel: 'Low' | 'Medium' | 'High';
 }
@@ -32,12 +33,14 @@ export interface RiskSummary {
   providedIn: 'root',
 })
 export class TransactionService {
-  private readonly baseUrl = `${environment.apiBaseUrl}/transaction`;
+  private readonly baseUrl = `${(environment as { apiUrl?: string; apiBaseUrl: string }).apiUrl ?? environment.apiBaseUrl}/transactions`;
 
   constructor(private readonly http: HttpClient) {}
 
-  submitTransaction(payload: TransactionPayload): Observable<TransactionResponse> {
-    return this.http.post<TransactionResponse>(this.baseUrl, payload);
+  submitTransaction(data: TransactionRequest): Observable<TransactionResponse> {
+    return this.http.post<TransactionResponse>(this.baseUrl, data).pipe(
+      catchError((error) => throwError(() => error))
+    );
   }
 
   getRiskSummary(): Observable<RiskSummary> {

@@ -1,6 +1,6 @@
 <article class="glass-panel dashboard-block">
   <h3 class="section-title">Transaction Form</h3>
-  <form class="transaction-form" [formGroup]="form()" (ngSubmit)="formSubmit.emit()">
+  <form class="transaction-form" [formGroup]="form" (ngSubmit)="submitTransaction()">
     <div class="field">
       <label for="userId">User ID</label>
       <input id="userId" type="text" formControlName="userId" placeholder="user-1001">
@@ -54,6 +54,7 @@
   @if (result(); as output) {
     <div class="risk-result">
       <p>Latest risk assessment</p>
+      <p>Transaction ID: {{ output.transactionId }}</p>
       <h4>{{ output.riskScore }}</h4>
       <span class="risk-badge">{{ output.riskLevel }}</span>
       <div class="risk-meter-track" role="progressbar" [attr.aria-valuenow]="output.riskScore" aria-valuemin="0" aria-valuemax="100">

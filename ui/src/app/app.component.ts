@@ -3,7 +3,7 @@ import { Component, inject, signal } from '@angular/core';
 import { HttpErrorResponse } from '@angular/common/http';
 import { ReactiveFormsModule, FormGroup, FormControl, Validators } from '@angular/forms';
 import { RiskDashboardService } from './services/risk-dashboard.service';
-import { RiskSummary, TransactionAlert, TransactionPayload, TransactionResponse, TransactionService } from './services/transaction.service';
+import { RiskSummary, TransactionAlert, TransactionService } from './services/transaction.service';
 import { DashboardComponent } from './components/dashboard/dashboard.component';
 import { TransactionFormComponent } from './components/transaction-form/transaction-form.component';
 import { AlertsPanelComponent } from './components/alerts-panel/alerts-panel.component';
@@ -25,13 +25,9 @@ export class AppComponent {
   submitting = signal(false);
   status = signal('');
   statusTone = signal<'success' | 'error'>('success');
-  transactionSubmitting = signal(false);
-  transactionStatus = signal('');
-  transactionStatusTone = signal<'success' | 'error'>('success');
   apiErrorMessage = signal('');
   dashboardLoading = signal(false);
   alertsLoading = signal(false);
-  transactionResult = signal<TransactionResponse | null>(null);
   riskSummary = signal<RiskSummary>({
     totalTransactionsProcessed: 0,
     highRiskAlertsCount: 0,
@@ -51,13 +47,6 @@ export class AppComponent {
     email: new FormControl('', [Validators.required, Validators.email]),
     password: new FormControl('', [Validators.required, Validators.minLength(8)]),
     confirmPassword: new FormControl('', [Validators.required])
-  });
-
-  transactionForm = new FormGroup({
-    userId: new FormControl('', [Validators.required]),
-    amount: new FormControl<number | null>(null, [Validators.required, Validators.min(1)]),
-    location: new FormControl('', [Validators.required]),
-    timestamp: new FormControl(this.getDateTimeLocalValue(), [Validators.required]),
   });
 
   // --- AUTHENTICATION METHODS ---
@@ -145,11 +134,6 @@ export class AppComponent {
     'Exportable audit reports for internal and external stakeholders',
   ];
 
-  hasTransactionError(controlName: string, errorType: string): boolean {
-    const control = this.transactionForm.controls[controlName as keyof typeof this.transactionForm.controls];
-    return !!(control?.touched && control?.hasError(errorType));
-  }
-
   loadAlerts(): void {
     this.alertsLoading.set(true);
     this.transactionService.getAlerts(10).subscribe({
@@ -160,51 +144,6 @@ export class AppComponent {
       error: (error: HttpErrorResponse) => {
         this.alertsLoading.set(false);
         this.apiErrorMessage.set(this.getFriendlyApiErrorMessage(error));
-      },
-    });
-  }
-
-  submitTransaction(): void {
-    if (this.transactionForm.invalid) {
-      this.transactionForm.markAllAsTouched();
-      return;
-    }
-
-    this.apiErrorMessage.set('');
-    this.transactionSubmitting.set(true);
-    this.transactionStatus.set('Submitting transaction for risk scoring...');
-    this.transactionStatusTone.set('success');
-
-    const rawPayload = this.transactionForm.getRawValue() as {
-      userId: string;
-      amount: number;
-      location: string;
-      timestamp: string;
-    };
-    const payload: TransactionPayload = {
-      userId: rawPayload.userId,
-      amount: rawPayload.amount,
-      location: rawPayload.location,
-      timestamp: new Date(rawPayload.timestamp).toISOString(),
-    };
-
-    this.transactionService.submitTransaction(payload).subscribe({
-      next: (response) => {
-        this.transactionResult.set(response);
-        this.transactionStatusTone.set('success');
-        this.transactionStatus.set(
-          `Risk score updated: ${response.riskScore} (${response.riskLevel})`
-        );
-        this.transactionSubmitting.set(false);
-        this.loadDashboard();
-        this.transactionForm.controls.timestamp.setValue(this.getDateTimeLocalValue());
-      },
-      error: (error: HttpErrorResponse) => {
-        this.transactionStatusTone.set('error');
-        this.transactionStatus.set('Transaction scoring failed. Please retry.');
-        this.apiErrorMessage.set(this.getFriendlyApiErrorMessage(error));
-        this.transactionResult.set(null);
-        this.transactionSubmitting.set(false);
       },
     });
   }
@@ -242,9 +181,4 @@ export class AppComponent {
     return error.error?.message ?? 'We could not reach the fraud scoring API. Check that the backend is running on http://localhost:5257 and try again.';
   }
 
-  private getDateTimeLocalValue(): string {
-    const current = new Date();
-    current.setMinutes(current.getMinutes() - current.getTimezoneOffset());
-    return current.toISOString().slice(0, 16);
-  }
 }

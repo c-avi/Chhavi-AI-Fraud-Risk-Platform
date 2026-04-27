@@ -21,13 +21,17 @@ public sealed class TransactionController : ControllerBase
     }
 
     [HttpPost]
-    [ProducesResponseType(typeof(RiskScoreResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(RiskScoreResponse), StatusCodes.Status201Created)]
+    [ProducesResponseType(typeof(ValidationProblemDetails), StatusCodes.Status400BadRequest)]
     public async Task<ActionResult<RiskScoreResponse>> PostTransaction(
         [FromBody] TransactionRequest request,
         CancellationToken cancellationToken)
     {
         var result = await _fraudScoringService.ScoreTransactionAsync(request, cancellationToken);
-        return Ok(result);
+        return CreatedAtAction(
+            nameof(GetTransactionById),
+            new { id = result.TransactionId },
+            result);
     }
 
     [HttpGet("{id:int}")]
