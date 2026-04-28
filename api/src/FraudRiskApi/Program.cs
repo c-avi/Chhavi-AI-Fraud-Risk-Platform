@@ -27,7 +27,7 @@ builder.Services.AddDbContext<FraudRiskDbContext>(options =>
 });
 
 builder.Services.AddScoped<ITransactionRepository, SqlTransactionRepository>();
-builder.Services.AddScoped<IFraudRiskModelEngine, MockFraudRiskModelEngine>();
+builder.Services.AddScoped<IFraudRiskModelEngine, PredictiveFraudModelEngine>();
 builder.Services.AddScoped<IFraudScoringService, FraudScoringService>();
 builder.Services.AddScoped<IReportingService, ReportingService>();
 
