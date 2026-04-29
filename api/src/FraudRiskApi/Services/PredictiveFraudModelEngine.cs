@@ -1,5 +1,6 @@
 using FraudRiskApi.Models;
 using FraudRiskApi.Models.ML;
+using Microsoft.ML;
 
 namespace FraudRiskApi.Services;
 
@@ -7,14 +8,36 @@ public sealed class PredictiveFraudModelEngine : IFraudRiskModelEngine
 {
     private const float MinimumAmountScale = 20_000f;
     private readonly string _modelArtifactPath;
-    private readonly bool _hasModelArtifact;
+    private bool _hasModelArtifact;
     private readonly ILogger<PredictiveFraudModelEngine> _logger;
+    private readonly PredictionEngine<FraudModelInput, FraudModelOutput>? _predictionEngine;
+    private readonly Lock _predictionLock = new();
 
     public PredictiveFraudModelEngine(IHostEnvironment hostEnvironment, ILogger<PredictiveFraudModelEngine> logger)
     {
         _logger = logger;
         _modelArtifactPath = Path.Combine(hostEnvironment.ContentRootPath, "Models", "ML", "fraud-risk-model.zip");
         _hasModelArtifact = File.Exists(_modelArtifactPath);
+
+        if (!_hasModelArtifact)
+        {
+            _logger.LogWarning("ML model artifact not found at {ModelArtifactPath}. Falling back to heuristic scoring.", _modelArtifactPath);
+            return;
+        }
+
+        try
+        {
+            var mlContext = new MLContext(seed: 42);
+            using var modelStream = File.OpenRead(_modelArtifactPath);
+            var transformer = mlContext.Model.Load(modelStream, out _);
+            _predictionEngine = mlContext.Model.CreatePredictionEngine<FraudModelInput, FraudModelOutput>(transformer);
+            _logger.LogInformation("Loaded fraud risk model artifact from {ModelArtifactPath}.", _modelArtifactPath);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to load ML model artifact from {ModelArtifactPath}. Falling back to heuristic scoring.", _modelArtifactPath);
+            _hasModelArtifact = false;
+        }
     }
 
     public async ValueTask<FraudRiskAssessment> EvaluateAsync(FraudRiskContext context, CancellationToken cancellationToken = default)
@@ -25,9 +48,9 @@ public sealed class PredictiveFraudModelEngine : IFraudRiskModelEngine
         cancellationToken.ThrowIfCancellationRequested();
 
         var modelInput = BuildModelInput(context);
-        var modelOutput = RunMockInference(modelInput, cancellationToken);
+        var modelOutput = RunInference(modelInput, cancellationToken);
 
-        var riskScore = Math.Clamp((int)Math.Round(modelOutput.PredictedFraudProbability * 100f), 0, 100);
+        var riskScore = ConvertProbabilityToRiskScore(modelOutput.Probability);
 
         return new FraudRiskAssessment
         {
@@ -53,11 +76,19 @@ public sealed class PredictiveFraudModelEngine : IFraudRiskModelEngine
         };
     }
 
-    private FraudModelOutput RunMockInference(FraudModelInput input, CancellationToken cancellationToken)
+    private FraudModelOutput RunInference(FraudModelInput input, CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
 
-        // Simulated ensemble output approximating tree-based feature interactions.
+        if (_hasModelArtifact && _predictionEngine is not null)
+        {
+            lock (_predictionLock)
+            {
+                return _predictionEngine.Predict(input);
+            }
+        }
+
+        // Fallback keeps service operational if model is unavailable.
         var linearCombination =
             (input.NormalizedAmount * 1.15f) +
             (MathF.Min(input.AmountToAverageRatio, 5f) * 0.85f) +
@@ -65,20 +96,18 @@ public sealed class PredictiveFraudModelEngine : IFraudRiskModelEngine
             (MathF.Min(input.DistinctLocationCount, 6f) * 0.24f) +
             (input.IsLocationChanged * 0.9f) -
             1.7f;
-
         var probability = Sigmoid(linearCombination);
-
-        if (_hasModelArtifact)
-        {
-            _logger.LogDebug("Model artifact found at {ModelArtifactPath}; using mock predictive fallback until ML runtime integration.", _modelArtifactPath);
-            probability = Math.Clamp(probability + 0.02f, 0f, 1f);
-        }
 
         return new FraudModelOutput
         {
-            PredictedFraudProbability = probability
+            PredictedLabel = probability >= 0.5f,
+            Probability = probability,
+            Score = probability
         };
     }
+
+    private static int ConvertProbabilityToRiskScore(float probability) =>
+        Math.Clamp((int)Math.Round(Math.Clamp(probability, 0f, 1f) * 100f), 0, 100);
 
     private static float NormalizeAmount(float amount, float scale)
     {
