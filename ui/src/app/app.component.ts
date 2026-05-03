@@ -2,8 +2,9 @@ import { CommonModule } from '@angular/common';
 import { Component, inject, signal } from '@angular/core';
 import { HttpErrorResponse } from '@angular/common/http';
 import { ReactiveFormsModule, FormGroup, FormControl, Validators } from '@angular/forms';
+import { Alert } from './services/alert.service';
 import { RiskDashboardService } from './services/risk-dashboard.service';
-import { RiskSummary, TransactionAlert, TransactionService } from './services/transaction.service';
+import { RiskSummary } from './services/transaction.service';
 import { DashboardComponent } from './components/dashboard/dashboard.component';
 import { TransactionFormComponent } from './components/transaction-form/transaction-form.component';
 import { AlertsPanelComponent } from './components/alerts-panel/alerts-panel.component';
@@ -16,7 +17,6 @@ import { AlertsPanelComponent } from './components/alerts-panel/alerts-panel.com
   styleUrl: './app.component.css',
 })
 export class AppComponent {
-  private readonly transactionService = inject(TransactionService);
   private readonly riskDashboardService = inject(RiskDashboardService);
 
   // --- AUTHENTICATION & NAVIGATION STATE ---
@@ -27,13 +27,12 @@ export class AppComponent {
   statusTone = signal<'success' | 'error'>('success');
   apiErrorMessage = signal('');
   dashboardLoading = signal(false);
-  alertsLoading = signal(false);
   riskSummary = signal<RiskSummary>({
     totalTransactionsProcessed: 0,
     highRiskAlertsCount: 0,
     averageFraudRiskScore: 0,
   });
-  alertQueue = signal<TransactionAlert[]>([]);
+  alertQueue = signal<Alert[]>([]);
 
   // --- FORMS ---
   loginForm = new FormGroup({
@@ -134,20 +133,6 @@ export class AppComponent {
     'Exportable audit reports for internal and external stakeholders',
   ];
 
-  loadAlerts(): void {
-    this.alertsLoading.set(true);
-    this.transactionService.getAlerts(10).subscribe({
-      next: (alerts) => {
-        this.alertQueue.set(alerts);
-        this.alertsLoading.set(false);
-      },
-      error: (error: HttpErrorResponse) => {
-        this.alertsLoading.set(false);
-        this.apiErrorMessage.set(this.getFriendlyApiErrorMessage(error));
-      },
-    });
-  }
-
   dismissApiError(): void {
     this.apiErrorMessage.set('');
   }
@@ -159,11 +144,9 @@ export class AppComponent {
         this.riskSummary.set(summary);
         this.alertQueue.set(alerts);
         this.dashboardLoading.set(false);
-        this.alertsLoading.set(false);
       },
       error: (error: HttpErrorResponse) => {
         this.dashboardLoading.set(false);
-        this.alertsLoading.set(false);
         this.apiErrorMessage.set(this.getFriendlyApiErrorMessage(error));
       },
     });

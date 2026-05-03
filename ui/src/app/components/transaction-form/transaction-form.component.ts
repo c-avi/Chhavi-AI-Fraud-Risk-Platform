@@ -46,8 +46,10 @@ export class TransactionFormComponent {
       userId: raw.userId,
       amount: raw.amount,
       location: raw.location,
-      timestamp: new Date(raw.timestamp).toISOString(),
+      timestamp: this.toIsoTimestamp(raw.timestamp),
     };
+
+    console.log('Payload:', payload);
 
     this.submitting.set(true);
     this.statusTone.set('success');
@@ -104,5 +106,14 @@ export class TransactionFormComponent {
     const current = new Date();
     current.setMinutes(current.getMinutes() - current.getTimezoneOffset());
     return current.toISOString().slice(0, 16);
+  }
+
+  private toIsoTimestamp(timestamp: string | null | undefined): string | null {
+    if (!timestamp) {
+      return null;
+    }
+
+    const parsedTimestamp = new Date(timestamp);
+    return Number.isNaN(parsedTimestamp.getTime()) ? null : parsedTimestamp.toISOString();
   }
 }

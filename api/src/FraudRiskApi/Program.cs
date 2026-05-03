@@ -27,8 +27,11 @@ builder.Services.AddDbContext<FraudRiskDbContext>(options =>
 });
 
 builder.Services.AddScoped<ITransactionRepository, SqlTransactionRepository>();
+builder.Services.AddScoped<IAlertRepository, SqlAlertRepository>();
 builder.Services.AddScoped<IFraudRiskModelEngine, PredictiveFraudModelEngine>();
+builder.Services.AddScoped<IAiPredictionService, AiPredictionService>();
 builder.Services.AddScoped<IFraudScoringService, FraudScoringService>();
+builder.Services.AddScoped<IAlertService, AlertService>();
 builder.Services.AddScoped<IReportingService, ReportingService>();
 
 var app = builder.Build();
@@ -40,8 +43,9 @@ if (app.Environment.IsDevelopment())
     app.MapOpenApi();
 }
 
-using (var scope = app.Services.CreateScope())
+if (!app.Environment.IsEnvironment("Testing"))
 {
+    using var scope = app.Services.CreateScope();
     var dbContext = scope.ServiceProvider.GetRequiredService<FraudRiskDbContext>();
     dbContext.Database.Migrate();
 }
@@ -55,3 +59,5 @@ app.UseAuthorization();
 app.MapControllers();
 
 app.Run();
+
+public partial class Program;

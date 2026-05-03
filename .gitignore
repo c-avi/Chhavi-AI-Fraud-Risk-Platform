@@ -17,3 +17,6 @@ ui/out-tsc/
 .vscode/
 .idea/
 .DS_Store
+
+# --- ML Model Artifacts ---
+api/src/FraudRiskApi/Models/ML/*.zip

@@ -59,6 +59,17 @@
   color: #9db5ca;
 }
 
+.alert-time,
+.alert-error,
+.empty-state {
+  margin: 0.25rem 0 0;
+  color: #9db5ca;
+}
+
+.alert-error {
+  color: #ffb6b6;
+}
+
 .alert-meta {
   text-align: right;
 }

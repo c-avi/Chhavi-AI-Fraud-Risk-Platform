@@ -7,6 +7,7 @@ public sealed class InMemoryTransactionRepository : ITransactionRepository
 {
     private readonly ConcurrentDictionary<string, List<Transaction>> _transactionsByUser = new(StringComparer.OrdinalIgnoreCase);
     private readonly Lock _sync = new();
+    private int _nextTransactionId = 1;
 
     public Task<Transaction?> GetByIdAsync(int transactionId, CancellationToken cancellationToken = default)
     {
@@ -204,6 +205,11 @@ public sealed class InMemoryTransactionRepository : ITransactionRepository
 
         lock (_sync)
         {
+            if (transaction.TransactionId == 0)
+            {
+                transaction.TransactionId = _nextTransactionId++;
+            }
+
             if (!_transactionsByUser.TryGetValue(transaction.UserId, out var entries))
             {
                 entries = [];

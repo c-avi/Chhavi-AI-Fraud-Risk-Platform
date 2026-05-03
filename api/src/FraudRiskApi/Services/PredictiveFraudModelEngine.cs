@@ -6,9 +6,9 @@ namespace FraudRiskApi.Services;
 
 public sealed class PredictiveFraudModelEngine : IFraudRiskModelEngine
 {
-    private const float MinimumAmountScale = 20_000f;
+    private const int ErrorScore = -1;
     private readonly string _modelArtifactPath;
-    private bool _hasModelArtifact;
+    private readonly bool _isModelLoaded;
     private readonly ILogger<PredictiveFraudModelEngine> _logger;
     private readonly PredictionEngine<FraudModelInput, FraudModelOutput>? _predictionEngine;
     private readonly Lock _predictionLock = new();
@@ -16,12 +16,11 @@ public sealed class PredictiveFraudModelEngine : IFraudRiskModelEngine
     public PredictiveFraudModelEngine(IHostEnvironment hostEnvironment, ILogger<PredictiveFraudModelEngine> logger)
     {
         _logger = logger;
-        _modelArtifactPath = Path.Combine(hostEnvironment.ContentRootPath, "Models", "ML", "fraud-risk-model.zip");
-        _hasModelArtifact = File.Exists(_modelArtifactPath);
+        _modelArtifactPath = ResolveModelArtifactPath(hostEnvironment.ContentRootPath);
 
-        if (!_hasModelArtifact)
+        if (!File.Exists(_modelArtifactPath))
         {
-            _logger.LogWarning("ML model artifact not found at {ModelArtifactPath}. Falling back to heuristic scoring.", _modelArtifactPath);
+            _logger.LogError("ML model artifact missing at {ModelArtifactPath}. Prediction engine will not be available.", _modelArtifactPath);
             return;
         }
 
@@ -31,12 +30,12 @@ public sealed class PredictiveFraudModelEngine : IFraudRiskModelEngine
             using var modelStream = File.OpenRead(_modelArtifactPath);
             var transformer = mlContext.Model.Load(modelStream, out _);
             _predictionEngine = mlContext.Model.CreatePredictionEngine<FraudModelInput, FraudModelOutput>(transformer);
-            _logger.LogInformation("Loaded fraud risk model artifact from {ModelArtifactPath}.", _modelArtifactPath);
+            _isModelLoaded = true;
+            _logger.LogInformation("ML Model Successfully Loaded from {ModelArtifactPath}.", _modelArtifactPath);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to load ML model artifact from {ModelArtifactPath}. Falling back to heuristic scoring.", _modelArtifactPath);
-            _hasModelArtifact = false;
+            _logger.LogError(ex, "Failed to load ML model artifact from {ModelArtifactPath}. Prediction engine unavailable.", _modelArtifactPath);
         }
     }
 
@@ -49,8 +48,18 @@ public sealed class PredictiveFraudModelEngine : IFraudRiskModelEngine
 
         var modelInput = BuildModelInput(context);
         var modelOutput = RunInference(modelInput, cancellationToken);
+        if (modelOutput is null)
+        {
+            return new FraudRiskAssessment
+            {
+                RiskScore = ErrorScore,
+                RiskLevel = GetRiskLevel(ErrorScore)
+            };
+        }
 
-        var riskScore = ConvertProbabilityToRiskScore(modelOutput.Probability);
+        var probability = ResolveProbability(modelOutput);
+        _logger.LogInformation("ML inference raw probability: {RawProbability}", probability);
+        var riskScore = ConvertProbabilityToRiskScore(probability);
 
         return new FraudRiskAssessment
         {
@@ -59,9 +68,34 @@ public sealed class PredictiveFraudModelEngine : IFraudRiskModelEngine
         };
     }
 
+    private static string ResolveModelArtifactPath(string contentRootPath)
+    {
+        var relativePath = Path.Combine("Models", "ML", "fraud-risk-model.zip");
+        var primaryCandidate = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, relativePath));
+        if (File.Exists(primaryCandidate))
+        {
+            return primaryCandidate;
+        }
+
+        var contentRootCandidate = Path.GetFullPath(Path.Combine(contentRootPath, relativePath));
+        if (File.Exists(contentRootCandidate))
+        {
+            return contentRootCandidate;
+        }
+
+        // Covers local development where the app runs from bin/* and the model sits under source root.
+        var sourceRelativeCandidate = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", relativePath));
+        if (File.Exists(sourceRelativeCandidate))
+        {
+            return sourceRelativeCandidate;
+        }
+
+        return primaryCandidate;
+    }
+
     private FraudModelInput BuildModelInput(FraudRiskContext context)
     {
-        var amountScale = Math.Max((float)context.HistoricalAverageAmount * 4f, MinimumAmountScale);
+        var amountScale = Math.Max((float)context.HistoricalAverageAmount * 4f, 20_000f);
         var normalizedAmount = NormalizeAmount((float)context.Amount, amountScale);
         var amountToAverageRatio = GetAmountRatio((float)context.Amount, (float)context.HistoricalAverageAmount);
         var isLocationChanged = HasLocationChanged(context) ? 1f : 0f;
@@ -76,11 +110,11 @@ public sealed class PredictiveFraudModelEngine : IFraudRiskModelEngine
         };
     }
 
-    private FraudModelOutput RunInference(FraudModelInput input, CancellationToken cancellationToken)
+    private FraudModelOutput? RunInference(FraudModelInput input, CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
 
-        if (_hasModelArtifact && _predictionEngine is not null)
+        if (_isModelLoaded && _predictionEngine is not null)
         {
             lock (_predictionLock)
             {
@@ -88,26 +122,39 @@ public sealed class PredictiveFraudModelEngine : IFraudRiskModelEngine
             }
         }
 
-        // Fallback keeps service operational if model is unavailable.
-        var linearCombination =
-            (input.NormalizedAmount * 1.15f) +
-            (MathF.Min(input.AmountToAverageRatio, 5f) * 0.85f) +
-            (MathF.Min(input.RecentTransactionCount, 8f) * 0.32f) +
-            (MathF.Min(input.DistinctLocationCount, 6f) * 0.24f) +
-            (input.IsLocationChanged * 0.9f) -
-            1.7f;
-        var probability = Sigmoid(linearCombination);
-
-        return new FraudModelOutput
-        {
-            PredictedLabel = probability >= 0.5f,
-            Probability = probability,
-            Score = probability
-        };
+        _logger.LogError("Model inference skipped because the ML model is not loaded.");
+        return null;
     }
 
-    private static int ConvertProbabilityToRiskScore(float probability) =>
-        Math.Clamp((int)Math.Round(Math.Clamp(probability, 0f, 1f) * 100f), 0, 100);
+    private float ResolveProbability(FraudModelOutput output)
+    {
+        var probability = output.Probability;
+        if (probability is >= 0f and <= 1f)
+        {
+            return probability;
+        }
+
+        if (output.Score is >= 0f and <= 1f)
+        {
+            _logger.LogWarning(
+                "FraudModelOutput.Probability is out of range ({Probability}); using Score as probability.",
+                output.Probability);
+            return output.Score;
+        }
+
+        _logger.LogWarning(
+            "FraudModelOutput probability-like outputs are invalid (Probability={Probability}, Score={Score}); defaulting to 0.",
+            output.Probability,
+            output.Score);
+        return 0f;
+    }
+
+    private static int ConvertProbabilityToRiskScore(float probability)
+    {
+        var normalized = Math.Clamp(probability, 0f, 1f);
+        var scaledScore = Math.Round((decimal)normalized * 100m, 1, MidpointRounding.AwayFromZero);
+        return (int)Math.Clamp(decimal.ToInt32(Math.Round(scaledScore, 0, MidpointRounding.AwayFromZero)), 0, 100);
+    }
 
     private static float NormalizeAmount(float amount, float scale)
     {
@@ -143,11 +190,10 @@ public sealed class PredictiveFraudModelEngine : IFraudRiskModelEngine
             StringComparison.OrdinalIgnoreCase);
     }
 
-    private static float Sigmoid(float value) => 1f / (1f + MathF.Exp(-value));
-
     private static string GetRiskLevel(int score) =>
         score switch
         {
+            < 0 => "Unavailable",
             >= 70 => "High",
             >= 40 => "Medium",
             _ => "Low"

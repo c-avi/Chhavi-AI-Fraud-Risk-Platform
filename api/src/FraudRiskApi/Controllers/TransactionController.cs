@@ -71,6 +71,7 @@ public sealed class TransactionController : ControllerBase
     }
 
     [HttpGet("alerts")]
+    [Obsolete("Use GET /api/v1/alerts for persisted high-risk alerts.")]
     [ProducesResponseType(typeof(IReadOnlyList<TransactionAlertResponse>), StatusCodes.Status200OK)]
     public async Task<ActionResult<IReadOnlyList<TransactionAlertResponse>>> GetAlerts(
         [FromQuery] int limit = 10,

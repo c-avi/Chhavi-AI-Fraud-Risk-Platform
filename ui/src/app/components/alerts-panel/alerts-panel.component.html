@@ -1,17 +1,22 @@
 <article class="glass-panel dashboard-block">
   <div class="alerts-head">
     <h3 class="section-title">Alerts Panel</h3>
-    <button type="button" class="refresh-btn" (click)="refresh.emit()" [disabled]="loading()">
+    <button type="button" class="refresh-btn" (click)="loadAlerts()" [disabled]="loading()">
       {{ loading() ? 'Refreshing...' : 'Refresh' }}
     </button>
   </div>
 
+  @if (errorMessage()) {
+    <p class="alert-error" role="alert">{{ errorMessage() }}</p>
+  }
+
   <div class="alerts-panel">
-    @for (alert of alerts(); track alert.timestamp) {
+    @for (alert of alerts(); track alert.id) {
       <article class="alert-row">
         <div>
-          <p class="alert-id">{{ alert.userId }}</p>
-          <p class="alert-customer">{{ alert.timestamp | date: 'medium' }}</p>
+          <p class="alert-id">Transaction #{{ alert.transactionId }}</p>
+          <p class="alert-customer">{{ alert.message }}</p>
+          <p class="alert-time">{{ alert.createdAt | date: 'medium' }}</p>
           <div class="risk-meter-track" role="progressbar" [attr.aria-valuenow]="alert.riskScore" aria-valuemin="0" aria-valuemax="100">
             <span
               class="risk-meter-fill"
@@ -21,10 +26,12 @@
           </div>
         </div>
         <div class="alert-meta">
-          <span class="score-pill" [class]=" 'score-pill ' + getLevelClass(alert.riskLevel)">{{ alert.riskScore }}</span>
-          <p>{{ alert.riskLevel }} Risk</p>
+          <span class="score-pill" [class]=" 'score-pill ' + scoreClass(alert.riskScore)">{{ alert.riskScore }}</span>
+          <p>High Risk</p>
         </div>
       </article>
+    } @empty {
+      <p class="empty-state">No high-risk alerts yet.</p>
     }
   </div>
 </article>

@@ -1,4 +1,5 @@
 using FraudRiskApi.Models;
+using FraudRiskApi.Domain.Models;
 using Microsoft.EntityFrameworkCore;
 
 namespace FraudRiskApi.Data;
@@ -11,6 +12,7 @@ public sealed class FraudRiskDbContext : DbContext
     }
 
     public DbSet<Transaction> Transactions => Set<Transaction>();
+    public DbSet<Alert> Alerts => Set<Alert>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -44,6 +46,35 @@ public sealed class FraudRiskDbContext : DbContext
                 .HasMaxLength(20);
 
             entity.HasIndex(transaction => new { transaction.UserId, transaction.Timestamp });
+        });
+
+        modelBuilder.Entity<Alert>(entity =>
+        {
+            entity.ToTable("Alerts");
+            entity.HasKey(alert => alert.Id);
+
+            entity.Property(alert => alert.Id)
+                .ValueGeneratedOnAdd();
+
+            entity.Property(alert => alert.TransactionId)
+                .IsRequired();
+
+            entity.Property(alert => alert.RiskScore)
+                .IsRequired();
+
+            entity.Property(alert => alert.Message)
+                .IsRequired()
+                .HasMaxLength(500);
+
+            entity.Property(alert => alert.CreatedAt)
+                .IsRequired();
+
+            entity.HasIndex(alert => alert.CreatedAt);
+
+            entity.HasOne<Transaction>()
+                .WithMany()
+                .HasForeignKey(alert => alert.TransactionId)
+                .OnDelete(DeleteBehavior.Cascade);
         });
     }
 }

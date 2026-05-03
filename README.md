@@ -4,7 +4,12 @@ Scores transactions based on fraud likelihood using behavioral and transactional
 
 ## AI Fraud Risk Scoring Setup
 
-The backend now uses an injected AI-style scoring engine (`IFraudRiskModelEngine`) with a default `MockFraudRiskModelEngine` implementation. This preserves the `Controller -> Service -> Repository` flow while making it easy to swap in an ML.NET model later.
+The backend now uses an injected AI/ML scoring engine (`IFraudRiskModelEngine`) and exposes a dedicated prediction endpoint at `POST /api/ai/predict`. The implementation preserves the `Controller -> Service -> Repository` flow:
+
+- `AiController` handles the HTTP API contract.
+- `AiPredictionService` validates requests, gathers historical transaction signals, and runs model inference.
+- `PredictiveFraudModelEngine` loads the ML.NET model artifact from `Models/ML/fraud-risk-model.zip`.
+- `ITransactionRepository` supplies recent activity, average amount, and location history features.
 
 Backend requirements:
 
@@ -25,6 +30,32 @@ dotnet run
 ```
 
 Update `api/src/FraudRiskApi/appsettings.json` if your SQL Server instance is different from `.\\SQLEXPRESS`.
+
+Run the AI prediction API:
+
+```powershell
+curl -Method POST http://localhost:5257/api/ai/predict `
+  -ContentType "application/json" `
+  -Body '{
+    "userId": "user-100",
+    "amount": 12500.00,
+    "location": "Bengaluru",
+    "timestamp": "2026-04-30T12:00:00Z"
+  }'
+```
+
+Sample response:
+
+```json
+{
+  "userId": "user-100",
+  "riskScore": 76,
+  "riskLevel": "High",
+  "confidenceScore": 0.76,
+  "modelVersion": "fraud-risk-ml-v1",
+  "predictedAtUtc": "2026-05-01T05:30:00Z"
+}
+```
 
 Frontend setup:
 
@@ -51,4 +82,5 @@ Screenshot:
 ## Flow Documentation
 
 - Sequence diagram: [docs/ai-risk-scoring-sequence.md](docs/ai-risk-scoring-sequence.md)
+- AI model integration: [docs/ai-model-integration.md](docs/ai-model-integration.md)
 - UI verification checklist: [ui/tests/risk-summary-cards-checklist.md](ui/tests/risk-summary-cards-checklist.md)

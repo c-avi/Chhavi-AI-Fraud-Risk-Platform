@@ -14,6 +14,11 @@
     </PackageReference>
     <PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" Version="10.0.5" />
     <PackageReference Include="Microsoft.ML" Version="5.0.0" />
+    <PackageReference Include="Microsoft.ML.FastTree" Version="5.0.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="Models\ML\fraud-risk-model.zip" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
 </Project>

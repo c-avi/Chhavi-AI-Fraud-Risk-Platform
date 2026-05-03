@@ -156,7 +156,7 @@
     <section class="dashboard-grid">
       <app-dashboard [summary]="riskSummary()" [alerts]="alertQueue()" [loading]="dashboardLoading()"></app-dashboard>
       <app-transaction-form></app-transaction-form>
-      <app-alerts-panel [alerts]="alertQueue()" [loading]="alertsLoading()" (refresh)="loadAlerts()"></app-alerts-panel>
+      <app-alerts-panel></app-alerts-panel>
     </section>
 
     <section class="capabilities-grid">

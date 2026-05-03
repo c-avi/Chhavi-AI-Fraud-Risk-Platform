@@ -7,13 +7,16 @@ public sealed class FraudScoringService : IFraudScoringService
 {
     private readonly ITransactionRepository _transactionRepository;
     private readonly IFraudRiskModelEngine _fraudRiskModelEngine;
+    private readonly IAlertService _alertService;
 
     public FraudScoringService(
         ITransactionRepository transactionRepository,
-        IFraudRiskModelEngine fraudRiskModelEngine)
+        IFraudRiskModelEngine fraudRiskModelEngine,
+        IAlertService alertService)
     {
         _transactionRepository = transactionRepository;
         _fraudRiskModelEngine = fraudRiskModelEngine;
+        _alertService = alertService;
     }
 
     public async Task<RiskScoreResponse> ScoreTransactionAsync(TransactionRequest request, CancellationToken cancellationToken = default)
@@ -64,6 +67,7 @@ public sealed class FraudScoringService : IFraudScoringService
         };
 
         await _transactionRepository.AddAsync(transaction, cancellationToken);
+        await _alertService.CreateAlertIfHighRiskAsync(transaction, cancellationToken);
 
         return new RiskScoreResponse
         {
@@ -81,6 +85,7 @@ public sealed class FraudScoringService : IFraudScoringService
         var transactions = await _transactionRepository.GetRecentTransactionsAsync(limit, cancellationToken);
 
         return transactions
+            .Where(transaction => transaction.RiskScore >= 70)
             .Select(transaction => new TransactionAlertResponse
             {
                 UserId = transaction.UserId,

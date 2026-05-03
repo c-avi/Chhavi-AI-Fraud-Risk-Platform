@@ -97,36 +97,57 @@ public sealed class FraudScoringServiceTests
     }
 
     [Fact]
-    public async Task GetRecentAlertsAsync_ReturnsMostRecentTransactionsFirst()
+    public async Task ScoreTransactionAsync_HighRiskScore_PersistsAlert()
     {
-        var service = CreateService();
+        var alertRepository = new InMemoryAlertRepository();
+        var service = CreateService(alertRepository);
 
         await service.ScoreTransactionAsync(new TransactionRequest
         {
             UserId = "user-410",
             Amount = 200m,
             Location = "Delhi",
-            Timestamp = DateTime.UtcNow.AddMinutes(-5)
+            Timestamp = DateTime.UtcNow.AddMinutes(-10)
         });
 
         await service.ScoreTransactionAsync(new TransactionRequest
         {
             UserId = "user-410",
-            Amount = 500m,
+            Amount = 650m,
             Location = "Delhi",
+            Timestamp = DateTime.UtcNow.AddMinutes(-8)
+        });
+
+        await service.ScoreTransactionAsync(new TransactionRequest
+        {
+            UserId = "user-410",
+            Amount = 800m,
+            Location = "Delhi",
+            Timestamp = DateTime.UtcNow.AddMinutes(-6)
+        });
+
+        var result = await service.ScoreTransactionAsync(new TransactionRequest
+        {
+            UserId = "user-410",
+            Amount = 12_000m,
+            Location = "Kolkata",
             Timestamp = DateTime.UtcNow
         });
 
-        var alerts = await service.GetRecentAlertsAsync(2);
+        var alerts = await alertRepository.GetRecentAsync(10);
 
-        Assert.Equal(2, alerts.Count);
-        Assert.True(alerts[0].Timestamp >= alerts[1].Timestamp);
+        var alert = Assert.Single(alerts);
+        Assert.Equal(result.TransactionId, alert.TransactionId);
+        Assert.InRange(alert.RiskScore, 70, 100);
     }
 
-    private static FraudScoringService CreateService()
+    private static FraudScoringService CreateService(IAlertRepository? alertRepository = null)
     {
+        alertRepository ??= new InMemoryAlertRepository();
+
         return new FraudScoringService(
             new InMemoryTransactionRepository(),
-            new MockFraudRiskModelEngine());
+            new MockFraudRiskModelEngine(),
+            new AlertService(alertRepository));
     }
 }

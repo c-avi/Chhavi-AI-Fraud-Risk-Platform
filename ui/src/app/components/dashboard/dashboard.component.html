@@ -18,11 +18,11 @@
 <article class="glass-panel dashboard-block">
   <h3 class="section-title">Alert Snapshot</h3>
   <div class="alerts-snapshot">
-    @for (alert of visibleAlerts(); track alert.timestamp) {
+    @for (alert of visibleAlerts(); track alert.id) {
       <article class="alert-row">
         <div>
-          <p class="alert-id">{{ alert.userId }}</p>
-          <p class="alert-customer">{{ alert.riskLevel }} Risk</p>
+          <p class="alert-id">Transaction #{{ alert.transactionId }}</p>
+          <p class="alert-customer">{{ alert.message }}</p>
           <div class="risk-meter-track" role="progressbar" [attr.aria-valuenow]="alert.riskScore" aria-valuemin="0" aria-valuemax="100">
             <span
               class="risk-meter-fill"

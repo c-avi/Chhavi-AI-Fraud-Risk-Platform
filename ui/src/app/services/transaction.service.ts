@@ -7,20 +7,13 @@ export interface TransactionRequest {
   userId: string;
   amount: number;
   location: string;
-  timestamp: string;
+  timestamp: string | null;
 }
 
 export interface TransactionResponse {
   transactionId: number;
   riskScore: number;
   riskLevel: 'Low' | 'Medium' | 'High';
-}
-
-export interface TransactionAlert {
-  userId: string;
-  riskScore: number;
-  riskLevel: 'Low' | 'Medium' | 'High';
-  timestamp: string;
 }
 
 export interface RiskSummary {
@@ -45,9 +38,5 @@ export class TransactionService {
 
   getRiskSummary(): Observable<RiskSummary> {
     return this.http.get<RiskSummary>(`${this.baseUrl}/summary`);
-  }
-
-  getAlerts(limit = 10): Observable<TransactionAlert[]> {
-    return this.http.get<TransactionAlert[]>(`${this.baseUrl}/alerts?limit=${limit}`);
   }
 }

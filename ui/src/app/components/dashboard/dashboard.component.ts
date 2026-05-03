@@ -1,6 +1,7 @@
 import { CommonModule } from '@angular/common';
 import { Component, input } from '@angular/core';
-import { RiskSummary, TransactionAlert } from '../../services/transaction.service';
+import { Alert } from '../../services/alert.service';
+import { RiskSummary } from '../../services/transaction.service';
 
 interface SummaryCard {
   label: string;
@@ -16,7 +17,7 @@ interface SummaryCard {
 })
 export class DashboardComponent {
   summary = input.required<RiskSummary>();
-  alerts = input.required<TransactionAlert[]>();
+  alerts = input.required<Alert[]>();
   loading = input<boolean>(false);
 
   summaryCards(): SummaryCard[] {
@@ -38,7 +39,7 @@ export class DashboardComponent {
     ];
   }
 
-  visibleAlerts(): TransactionAlert[] {
+  visibleAlerts(): Alert[] {
     return this.alerts().slice(0, 3);
   }
 

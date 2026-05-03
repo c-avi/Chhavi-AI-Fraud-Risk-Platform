@@ -19,10 +19,11 @@ export interface TransactionResponse {
 }
 
 export interface AlertItem {
-  id: string;
-  customer: string;
-  score: number;
-  status: string;
+  id: number;
+  transactionId: number;
+  riskScore: number;
+  message: string;
+  createdAt: string;
 }
 
 @Injectable({
