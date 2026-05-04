@@ -60,7 +60,7 @@
       <div class="risk-meter-track" role="progressbar" [attr.aria-valuenow]="output.riskScore" aria-valuemin="0" aria-valuemax="100">
         <span
           class="risk-meter-fill"
-          [class]=" 'risk-meter-fill ' + riskMeterClass(output.riskScore)"
+          [class]=" 'risk-meter-fill ' + riskMeterClassForLevel(output.riskLevel)"
           [style.width.%]="output.riskScore">
         </span>
       </div>

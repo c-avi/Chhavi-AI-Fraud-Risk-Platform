@@ -8,73 +8,111 @@ public sealed class FraudScoringService : IFraudScoringService
     private readonly ITransactionRepository _transactionRepository;
     private readonly IFraudRiskModelEngine _fraudRiskModelEngine;
     private readonly IAlertService _alertService;
+    private readonly IScoringSubmissionStore _scoringSubmissionStore;
+    private readonly IFraudScoringQueue _fraudScoringQueue;
 
     public FraudScoringService(
         ITransactionRepository transactionRepository,
         IFraudRiskModelEngine fraudRiskModelEngine,
-        IAlertService alertService)
+        IAlertService alertService,
+        IScoringSubmissionStore scoringSubmissionStore,
+        IFraudScoringQueue fraudScoringQueue)
     {
         _transactionRepository = transactionRepository;
         _fraudRiskModelEngine = fraudRiskModelEngine;
         _alertService = alertService;
+        _scoringSubmissionStore = scoringSubmissionStore;
+        _fraudScoringQueue = fraudScoringQueue;
     }
 
-    public async Task<RiskScoreResponse> ScoreTransactionAsync(TransactionRequest request, CancellationToken cancellationToken = default)
+    public async Task<BeginScoringResult> SubmitTransactionForScoringAsync(
+        TransactionRequest request,
+        string idempotencyKey,
+        CancellationToken cancellationToken = default)
     {
+        ArgumentException.ThrowIfNullOrWhiteSpace(idempotencyKey);
         ValidateRequest(request);
-
-        var lastTransaction = await _transactionRepository.GetLastTransactionAsync(request.UserId, cancellationToken);
-        var recentWindowStart = request.Timestamp.AddMinutes(-15);
-        var historyWindowStart = request.Timestamp.AddDays(-30);
-        var recentTransactionCount = await _transactionRepository.CountTransactionsSinceAsync(
-            request.UserId,
-            recentWindowStart,
-            request.Timestamp,
-            cancellationToken);
-        var historicalAverageAmount = await _transactionRepository.GetAverageAmountAsync(
-            request.UserId,
-            historyWindowStart,
-            request.Timestamp,
-            cancellationToken);
-        var distinctLocationCount = await _transactionRepository.CountDistinctLocationsSinceAsync(
-            request.UserId,
-            historyWindowStart,
-            request.Timestamp,
+        var requestHash = TransactionRequestFingerprint.Compute(request);
+        var result = await _scoringSubmissionStore.TryBeginOrResolveAsync(
+            request,
+            idempotencyKey.Trim(),
+            requestHash,
             cancellationToken);
 
-        var assessment = await _fraudRiskModelEngine.EvaluateAsync(
-            new FraudRiskContext
+        if (result.Kind is BeginScoringKind.CreatedPending or BeginScoringKind.AlreadyPending)
+        {
+            await _fraudScoringQueue.EnqueueAsync(result.TransactionId, cancellationToken);
+        }
+
+        return result;
+    }
+
+    public async Task ProcessPendingTransactionAsync(int transactionId, CancellationToken cancellationToken = default)
+    {
+        var transaction = await _transactionRepository.GetByIdAsync(transactionId, cancellationToken);
+        if (transaction is null || transaction.ScoringStatus != TransactionScoringStatus.Pending)
+        {
+            return;
+        }
+
+        try
+        {
+            var lastTransaction = await _transactionRepository.GetLastTransactionAsync(transaction.UserId, cancellationToken);
+            var recentWindowStart = transaction.Timestamp.AddMinutes(-15);
+            var historyWindowStart = transaction.Timestamp.AddDays(-30);
+            var recentTransactionCount = await _transactionRepository.CountTransactionsSinceAsync(
+                transaction.UserId,
+                recentWindowStart,
+                transaction.Timestamp,
+                cancellationToken);
+            var historicalAverageAmount = await _transactionRepository.GetAverageAmountAsync(
+                transaction.UserId,
+                historyWindowStart,
+                transaction.Timestamp,
+                cancellationToken);
+            var distinctLocationCount = await _transactionRepository.CountDistinctLocationsSinceAsync(
+                transaction.UserId,
+                historyWindowStart,
+                transaction.Timestamp,
+                cancellationToken);
+
+            var context = new FraudRiskContext
             {
-                UserId = request.UserId,
-                Amount = request.Amount,
-                Location = request.Location,
-                Timestamp = request.Timestamp,
+                UserId = transaction.UserId,
+                Amount = transaction.Amount,
+                Location = transaction.Location,
+                Timestamp = transaction.Timestamp,
                 LastTransaction = lastTransaction,
                 RecentTransactionCount = recentTransactionCount,
                 HistoricalAverageAmount = historicalAverageAmount,
                 DistinctLocationCount = distinctLocationCount
-            },
-            cancellationToken);
+            };
 
-        var transaction = new Transaction
+            var assessment = await _fraudRiskModelEngine.EvaluateAsync(context, cancellationToken);
+            var featureSet = _fraudRiskModelEngine.GetAuditFeatureSet(context);
+
+            transaction.RiskScore = assessment.RiskScore;
+            transaction.RiskLevel = assessment.RiskLevel;
+            transaction.ScoringStatus = TransactionScoringStatus.Completed;
+            transaction.ScoringError = null;
+
+            await _transactionRepository.UpdateAsync(transaction, cancellationToken);
+            await _alertService.CreateAlertIfHighRiskAsync(transaction, featureSet, cancellationToken);
+        }
+        catch (Exception ex)
         {
-            UserId = request.UserId,
-            Amount = request.Amount,
-            Location = request.Location,
-            Timestamp = request.Timestamp,
-            RiskScore = assessment.RiskScore,
-            RiskLevel = assessment.RiskLevel
-        };
+            var failed = await _transactionRepository.GetByIdAsync(transactionId, cancellationToken);
+            if (failed is null || failed.ScoringStatus != TransactionScoringStatus.Pending)
+            {
+                return;
+            }
 
-        await _transactionRepository.AddAsync(transaction, cancellationToken);
-        await _alertService.CreateAlertIfHighRiskAsync(transaction, cancellationToken);
+            failed.RiskLevel = "Unavailable";
+            failed.ScoringStatus = TransactionScoringStatus.Failed;
+            failed.ScoringError = ex.Message.Length > 2000 ? ex.Message[..2000] : ex.Message;
 
-        return new RiskScoreResponse
-        {
-            TransactionId = transaction.TransactionId,
-            RiskScore = transaction.RiskScore,
-            RiskLevel = transaction.RiskLevel
-        };
+            await _transactionRepository.UpdateAsync(failed, cancellationToken);
+        }
     }
 
     public Task<RiskSummaryResponse> GetRiskSummaryAsync(CancellationToken cancellationToken = default) =>
@@ -82,10 +120,11 @@ public sealed class FraudScoringService : IFraudScoringService
 
     public async Task<IReadOnlyList<TransactionAlertResponse>> GetRecentAlertsAsync(int limit = 10, CancellationToken cancellationToken = default)
     {
+        const int highRiskThreshold = 70;
         var transactions = await _transactionRepository.GetRecentTransactionsAsync(limit, cancellationToken);
 
         return transactions
-            .Where(transaction => transaction.RiskScore >= 70)
+            .Where(transaction => transaction.RiskScore >= highRiskThreshold)
             .Select(transaction => new TransactionAlertResponse
             {
                 UserId = transaction.UserId,

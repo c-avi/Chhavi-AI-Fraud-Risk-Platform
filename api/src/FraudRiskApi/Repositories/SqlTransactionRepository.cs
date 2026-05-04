@@ -24,7 +24,9 @@ public sealed class SqlTransactionRepository : ITransactionRepository
     {
         return _dbContext.Transactions
             .AsNoTracking()
-            .Where(transaction => transaction.UserId == userId)
+            .Where(transaction =>
+                transaction.UserId == userId &&
+                transaction.ScoringStatus == TransactionScoringStatus.Completed)
             .OrderByDescending(transaction => transaction.Timestamp)
             .FirstOrDefaultAsync(cancellationToken);
     }
@@ -49,6 +51,7 @@ public sealed class SqlTransactionRepository : ITransactionRepository
         }
 
         return await query
+            .Where(transaction => transaction.ScoringStatus == TransactionScoringStatus.Completed)
             .OrderByDescending(transaction => transaction.Timestamp)
             .ToListAsync(cancellationToken);
     }
@@ -80,6 +83,7 @@ public sealed class SqlTransactionRepository : ITransactionRepository
         }
 
         return await query
+            .Where(transaction => transaction.ScoringStatus == TransactionScoringStatus.Completed)
             .OrderByDescending(transaction => transaction.Timestamp)
             .ToListAsync(cancellationToken);
     }
@@ -94,6 +98,7 @@ public sealed class SqlTransactionRepository : ITransactionRepository
             .AsNoTracking()
             .CountAsync(transaction =>
                 transaction.UserId == userId &&
+                transaction.ScoringStatus == TransactionScoringStatus.Completed &&
                 transaction.Timestamp >= fromTimestamp &&
                 transaction.Timestamp <= toTimestamp,
                 cancellationToken);
@@ -109,6 +114,7 @@ public sealed class SqlTransactionRepository : ITransactionRepository
             .AsNoTracking()
             .Where(transaction =>
                 transaction.UserId == userId &&
+                transaction.ScoringStatus == TransactionScoringStatus.Completed &&
                 transaction.Timestamp >= fromTimestamp &&
                 transaction.Timestamp <= toTimestamp)
             .Select(transaction => transaction.Amount)
@@ -127,6 +133,7 @@ public sealed class SqlTransactionRepository : ITransactionRepository
             .AsNoTracking()
             .Where(transaction =>
                 transaction.UserId == userId &&
+                transaction.ScoringStatus == TransactionScoringStatus.Completed &&
                 transaction.Timestamp >= fromTimestamp &&
                 transaction.Timestamp <= toTimestamp)
             .Select(transaction => transaction.Location)
@@ -136,14 +143,18 @@ public sealed class SqlTransactionRepository : ITransactionRepository
 
     public async Task<RiskSummaryResponse> GetRiskSummaryAsync(CancellationToken cancellationToken = default)
     {
-        var totalTransactionsProcessed = await _dbContext.Transactions.CountAsync(cancellationToken);
-        var highRiskAlertsCount = await _dbContext.Transactions.CountAsync(
+        var settled = _dbContext.Transactions
+            .AsNoTracking()
+            .Where(transaction => transaction.ScoringStatus == TransactionScoringStatus.Completed);
+
+        var totalTransactionsProcessed = await settled.CountAsync(cancellationToken);
+        var highRiskAlertsCount = await settled.CountAsync(
             transaction => transaction.RiskLevel == "High",
             cancellationToken);
         var averageFraudRiskScore = totalTransactionsProcessed == 0
             ? 0m
             : decimal.Round(
-                await _dbContext.Transactions.AverageAsync(transaction => (decimal)transaction.RiskScore, cancellationToken),
+                await settled.AverageAsync(transaction => (decimal)transaction.RiskScore, cancellationToken),
                 1);
 
         return new RiskSummaryResponse
@@ -158,6 +169,7 @@ public sealed class SqlTransactionRepository : ITransactionRepository
     {
         return await _dbContext.Transactions
             .AsNoTracking()
+            .Where(transaction => transaction.ScoringStatus == TransactionScoringStatus.Completed)
             .OrderByDescending(transaction => transaction.Timestamp)
             .Take(limit)
             .ToListAsync(cancellationToken);
@@ -167,5 +179,23 @@ public sealed class SqlTransactionRepository : ITransactionRepository
     {
         await _dbContext.Transactions.AddAsync(transaction, cancellationToken);
         await _dbContext.SaveChangesAsync(cancellationToken);
+    }
+
+    public async Task UpdateAsync(Transaction transaction, CancellationToken cancellationToken = default)
+    {
+        _dbContext.Transactions.Update(transaction);
+        await _dbContext.SaveChangesAsync(cancellationToken);
+    }
+
+    public async Task<IReadOnlyList<int>> GetPendingTransactionIdsAsync(int take, CancellationToken cancellationToken = default)
+    {
+        var normalizedTake = Math.Clamp(take, 1, 10_000);
+        return await _dbContext.Transactions
+            .AsNoTracking()
+            .Where(t => t.ScoringStatus == TransactionScoringStatus.Pending)
+            .OrderBy(t => t.TransactionId)
+            .Take(normalizedTake)
+            .Select(t => t.TransactionId)
+            .ToListAsync(cancellationToken);
     }
 }

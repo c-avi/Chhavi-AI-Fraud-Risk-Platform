@@ -22,6 +22,34 @@ public sealed class MockFraudRiskModelEngine : IFraudRiskModelEngine
         });
     }
 
+    public FraudFeatureSet GetAuditFeatureSet(FraudRiskContext context)
+    {
+        var amountScale = Math.Max((float)context.HistoricalAverageAmount * 4f, 20_000f);
+        var normalizedAmount = NormalizeAmount((float)context.Amount, amountScale);
+        var amountToAverageRatio = GetAmountRatio((float)context.Amount, (float)context.HistoricalAverageAmount);
+        var recentCount = Math.Max(0, context.RecentTransactionCount);
+        var distinctLocations = Math.Max(0, context.DistinctLocationCount);
+        var locationChanged = context.LastTransaction is not null &&
+            !string.Equals(
+                context.LastTransaction.Location,
+                context.Location,
+                StringComparison.OrdinalIgnoreCase);
+
+        return new FraudFeatureSet
+        {
+            NormalizedAmount = normalizedAmount,
+            AmountToAverageRatio = amountToAverageRatio,
+            RecentTransactionCount = recentCount,
+            DistinctLocationCount = distinctLocations,
+            LocationChangedSinceLast = locationChanged,
+            GeoVelocity = new GeoVelocitySnapshot
+            {
+                DistinctLocationsInWindow = distinctLocations,
+                LocationChangedSinceLastTransaction = locationChanged
+            }
+        };
+    }
+
     private static int CalculateFrequencyRisk(int recentTransactionCount) =>
         recentTransactionCount switch
         {
@@ -90,4 +118,25 @@ public sealed class MockFraudRiskModelEngine : IFraudRiskModelEngine
             >= 40 => "Medium",
             _ => "Low"
         };
+
+    private static float NormalizeAmount(float amount, float scale)
+    {
+        if (scale <= 0f)
+        {
+            return 0f;
+        }
+
+        var normalized = amount / scale;
+        return Math.Clamp(normalized, 0f, 1f);
+    }
+
+    private static float GetAmountRatio(float amount, float historicalAverageAmount)
+    {
+        if (historicalAverageAmount <= 0f)
+        {
+            return amount > 0f ? 1f : 0f;
+        }
+
+        return MathF.Max(0f, amount / historicalAverageAmount);
+    }
 }

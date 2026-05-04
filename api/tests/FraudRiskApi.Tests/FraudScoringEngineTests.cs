@@ -9,9 +9,10 @@ public sealed class FraudScoringServiceTests
     [Fact]
     public async Task ScoreTransactionAsync_LocationVelocityAndAmountDeviation_ReturnsHighRisk()
     {
-        var service = CreateService();
+        var repository = new InMemoryTransactionRepository();
+        var service = CreateService(repository);
 
-        await service.ScoreTransactionAsync(new TransactionRequest
+        await SubmitAndCompleteAsync(service, repository, new TransactionRequest
         {
             UserId = "user-100",
             Amount = 500m,
@@ -19,7 +20,7 @@ public sealed class FraudScoringServiceTests
             Timestamp = DateTime.UtcNow.AddMinutes(-10)
         });
 
-        await service.ScoreTransactionAsync(new TransactionRequest
+        await SubmitAndCompleteAsync(service, repository, new TransactionRequest
         {
             UserId = "user-100",
             Amount = 650m,
@@ -27,7 +28,7 @@ public sealed class FraudScoringServiceTests
             Timestamp = DateTime.UtcNow.AddMinutes(-8)
         });
 
-        await service.ScoreTransactionAsync(new TransactionRequest
+        await SubmitAndCompleteAsync(service, repository, new TransactionRequest
         {
             UserId = "user-100",
             Amount = 800m,
@@ -43,7 +44,7 @@ public sealed class FraudScoringServiceTests
             Timestamp = DateTime.UtcNow
         };
 
-        var result = await service.ScoreTransactionAsync(request);
+        var result = await SubmitAndCompleteAsync(service, repository, request);
 
         Assert.InRange(result.RiskScore, 70, 100);
         Assert.Equal("High", result.RiskLevel);
@@ -52,7 +53,8 @@ public sealed class FraudScoringServiceTests
     [Fact]
     public async Task ScoreTransactionAsync_NoRules_ReturnsZero()
     {
-        var service = CreateService();
+        var repository = new InMemoryTransactionRepository();
+        var service = CreateService(repository);
 
         var request = new TransactionRequest
         {
@@ -62,7 +64,7 @@ public sealed class FraudScoringServiceTests
             Timestamp = DateTime.UtcNow
         };
 
-        var result = await service.ScoreTransactionAsync(request);
+        var result = await SubmitAndCompleteAsync(service, repository, request);
 
         Assert.Equal(0, result.RiskScore);
         Assert.Equal("Low", result.RiskLevel);
@@ -71,9 +73,10 @@ public sealed class FraudScoringServiceTests
     [Fact]
     public async Task GetRiskSummaryAsync_ReturnsAggregatedMetrics()
     {
-        var service = CreateService();
+        var repository = new InMemoryTransactionRepository();
+        var service = CreateService(repository);
 
-        await service.ScoreTransactionAsync(new TransactionRequest
+        await SubmitAndCompleteAsync(service, repository, new TransactionRequest
         {
             UserId = "user-300",
             Amount = 15_000m,
@@ -81,7 +84,7 @@ public sealed class FraudScoringServiceTests
             Timestamp = DateTime.UtcNow.AddMinutes(-2)
         });
 
-        await service.ScoreTransactionAsync(new TransactionRequest
+        await SubmitAndCompleteAsync(service, repository, new TransactionRequest
         {
             UserId = "user-301",
             Amount = 300m,
@@ -97,12 +100,13 @@ public sealed class FraudScoringServiceTests
     }
 
     [Fact]
-    public async Task ScoreTransactionAsync_HighRiskScore_PersistsAlert()
+    public async Task ScoreTransactionAsync_HighRiskScore_PersistsAlertWithFeatureJson()
     {
         var alertRepository = new InMemoryAlertRepository();
-        var service = CreateService(alertRepository);
+        var transactionRepository = new InMemoryTransactionRepository();
+        var service = CreateService(transactionRepository, alertRepository);
 
-        await service.ScoreTransactionAsync(new TransactionRequest
+        await SubmitAndCompleteAsync(service, transactionRepository, new TransactionRequest
         {
             UserId = "user-410",
             Amount = 200m,
@@ -110,7 +114,7 @@ public sealed class FraudScoringServiceTests
             Timestamp = DateTime.UtcNow.AddMinutes(-10)
         });
 
-        await service.ScoreTransactionAsync(new TransactionRequest
+        await SubmitAndCompleteAsync(service, transactionRepository, new TransactionRequest
         {
             UserId = "user-410",
             Amount = 650m,
@@ -118,7 +122,7 @@ public sealed class FraudScoringServiceTests
             Timestamp = DateTime.UtcNow.AddMinutes(-8)
         });
 
-        await service.ScoreTransactionAsync(new TransactionRequest
+        await SubmitAndCompleteAsync(service, transactionRepository, new TransactionRequest
         {
             UserId = "user-410",
             Amount = 800m,
@@ -126,7 +130,7 @@ public sealed class FraudScoringServiceTests
             Timestamp = DateTime.UtcNow.AddMinutes(-6)
         });
 
-        var result = await service.ScoreTransactionAsync(new TransactionRequest
+        var result = await SubmitAndCompleteAsync(service, transactionRepository, new TransactionRequest
         {
             UserId = "user-410",
             Amount = 12_000m,
@@ -139,15 +143,44 @@ public sealed class FraudScoringServiceTests
         var alert = Assert.Single(alerts);
         Assert.Equal(result.TransactionId, alert.TransactionId);
         Assert.InRange(alert.RiskScore, 70, 100);
+        Assert.False(string.IsNullOrWhiteSpace(alert.FeatureSetJson));
+        Assert.Contains("amountToAverageRatio", alert.FeatureSetJson, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("geoVelocity", alert.FeatureSetJson, StringComparison.OrdinalIgnoreCase);
     }
 
-    private static FraudScoringService CreateService(IAlertRepository? alertRepository = null)
+    private static FraudScoringService CreateService(
+        InMemoryTransactionRepository transactionRepository,
+        IAlertRepository? alertRepository = null)
     {
         alertRepository ??= new InMemoryAlertRepository();
 
         return new FraudScoringService(
-            new InMemoryTransactionRepository(),
+            transactionRepository,
             new MockFraudRiskModelEngine(),
-            new AlertService(alertRepository));
+            new AlertService(alertRepository),
+            new InMemoryScoringSubmissionStore(transactionRepository),
+            new FraudScoringQueue());
+    }
+
+    private static async Task<RiskScoreResponse> SubmitAndCompleteAsync(
+        FraudScoringService service,
+        InMemoryTransactionRepository repository,
+        TransactionRequest request)
+    {
+        var begin = await service.SubmitTransactionForScoringAsync(
+            request,
+            Guid.NewGuid().ToString("N"),
+            CancellationToken.None);
+
+        await service.ProcessPendingTransactionAsync(begin.TransactionId, CancellationToken.None);
+
+        var tx = await repository.GetByIdAsync(begin.TransactionId, CancellationToken.None);
+        Assert.NotNull(tx);
+        return new RiskScoreResponse
+        {
+            TransactionId = tx!.TransactionId,
+            RiskScore = tx.RiskScore,
+            RiskLevel = tx.RiskLevel
+        };
     }
 }

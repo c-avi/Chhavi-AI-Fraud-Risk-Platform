@@ -110,6 +110,25 @@ public sealed class PredictiveFraudModelEngine : IFraudRiskModelEngine
         };
     }
 
+    public FraudFeatureSet GetAuditFeatureSet(FraudRiskContext context)
+    {
+        var modelInput = BuildModelInput(context);
+        var locationChanged = modelInput.IsLocationChanged >= 0.5f;
+        return new FraudFeatureSet
+        {
+            NormalizedAmount = modelInput.NormalizedAmount,
+            AmountToAverageRatio = modelInput.AmountToAverageRatio,
+            RecentTransactionCount = (int)modelInput.RecentTransactionCount,
+            DistinctLocationCount = (int)modelInput.DistinctLocationCount,
+            LocationChangedSinceLast = locationChanged,
+            GeoVelocity = new GeoVelocitySnapshot
+            {
+                DistinctLocationsInWindow = (int)modelInput.DistinctLocationCount,
+                LocationChangedSinceLastTransaction = locationChanged
+            }
+        };
+    }
+
     private FraudModelOutput? RunInference(FraudModelInput input, CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();

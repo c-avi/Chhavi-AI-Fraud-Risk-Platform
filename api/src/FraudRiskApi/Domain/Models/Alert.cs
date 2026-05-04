@@ -7,4 +7,5 @@ public sealed class Alert
     public int RiskScore { get; set; }
     public string Message { get; set; } = string.Empty;
     public DateTime CreatedAt { get; set; }
+    public string? FeatureSetJson { get; set; }
 }

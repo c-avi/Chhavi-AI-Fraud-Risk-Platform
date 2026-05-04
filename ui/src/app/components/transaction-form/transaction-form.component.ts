@@ -74,21 +74,29 @@ export class TransactionFormComponent {
     });
   }
 
-  riskMeterClass(score: number): string {
-    if (score >= 75) {
-      return 'critical';
+  /**
+   * Presentation-only styling driven by API risk level (no client-side score thresholds).
+   */
+  riskMeterClassForLevel(riskLevel: string): string {
+    switch (riskLevel) {
+      case 'High':
+        return 'critical';
+      case 'Medium':
+        return 'warning';
+      case 'Low':
+        return 'safe';
+      default:
+        return 'pending';
     }
-
-    if (score >= 50) {
-      return 'warning';
-    }
-
-    return 'safe';
   }
 
   private getFriendlyApiErrorMessage(error: HttpErrorResponse): string {
     if (error.status === 400) {
-      return 'Validation failed. Check User ID, amount, location, and timestamp.';
+      return 'Validation failed. Check User ID, amount, location, timestamp, and Idempotency-Key.';
+    }
+
+    if (error.status === 409) {
+      return 'This Idempotency-Key was already used with a different transaction payload.';
     }
 
     if (error.status === 0) {

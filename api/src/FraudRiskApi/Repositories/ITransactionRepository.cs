@@ -21,4 +21,6 @@ public interface ITransactionRepository
     Task<RiskSummaryResponse> GetRiskSummaryAsync(CancellationToken cancellationToken = default);
     Task<IReadOnlyList<Transaction>> GetRecentTransactionsAsync(int limit, CancellationToken cancellationToken = default);
     Task AddAsync(Transaction transaction, CancellationToken cancellationToken = default);
+    Task UpdateAsync(Transaction transaction, CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<int>> GetPendingTransactionIdsAsync(int take, CancellationToken cancellationToken = default);
 }

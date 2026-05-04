@@ -1,3 +1,4 @@
+using System.Text.Json;
 using FraudRiskApi.Domain.Models;
 using FraudRiskApi.Models;
 using FraudRiskApi.Repositories;
@@ -7,6 +8,12 @@ namespace FraudRiskApi.Services;
 public sealed class AlertService : IAlertService
 {
     private const int HighRiskThreshold = 70;
+    private static readonly JsonSerializerOptions FeatureJsonOptions = new()
+    {
+        PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+        WriteIndented = false
+    };
+
     private readonly IAlertRepository _alertRepository;
 
     public AlertService(IAlertRepository alertRepository)
@@ -14,19 +21,25 @@ public sealed class AlertService : IAlertService
         _alertRepository = alertRepository;
     }
 
-    public async Task CreateAlertIfHighRiskAsync(Transaction transaction, CancellationToken cancellationToken = default)
+    public async Task CreateAlertIfHighRiskAsync(
+        Transaction transaction,
+        FraudFeatureSet featureSet,
+        CancellationToken cancellationToken = default)
     {
         if (transaction.RiskScore < HighRiskThreshold)
         {
             return;
         }
 
+        var featureJson = JsonSerializer.Serialize(featureSet, FeatureJsonOptions);
+
         var alert = new Alert
         {
             TransactionId = transaction.TransactionId,
             RiskScore = transaction.RiskScore,
             Message = $"High-risk transaction flagged with score {transaction.RiskScore}.",
-            CreatedAt = DateTime.UtcNow
+            CreatedAt = DateTime.UtcNow,
+            FeatureSetJson = featureJson
         };
 
         await _alertRepository.AddAsync(alert, cancellationToken);
@@ -44,7 +57,8 @@ public sealed class AlertService : IAlertService
                 TransactionId = alert.TransactionId,
                 RiskScore = alert.RiskScore,
                 Message = alert.Message,
-                CreatedAt = alert.CreatedAt
+                CreatedAt = alert.CreatedAt,
+                FeatureSetJson = alert.FeatureSetJson
             })
             .ToArray();
     }

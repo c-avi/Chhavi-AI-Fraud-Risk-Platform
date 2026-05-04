@@ -163,6 +163,10 @@ small {
   background: linear-gradient(90deg, #f06a57, #db3f62);
 }
 
+.risk-meter-fill.pending {
+  background: linear-gradient(90deg, #6b8299, #9aaec4);
+}
+
 @keyframes spin {
   to {
     transform: rotate(360deg);

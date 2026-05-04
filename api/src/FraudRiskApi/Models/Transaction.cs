@@ -9,4 +9,6 @@ public sealed class Transaction
     public DateTime Timestamp { get; set; }
     public int RiskScore { get; set; }
     public string RiskLevel { get; set; } = string.Empty;
+    public TransactionScoringStatus ScoringStatus { get; set; } = TransactionScoringStatus.Completed;
+    public string? ScoringError { get; set; }
 }

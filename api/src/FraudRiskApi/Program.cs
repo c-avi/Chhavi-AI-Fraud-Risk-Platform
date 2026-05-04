@@ -28,11 +28,14 @@ builder.Services.AddDbContext<FraudRiskDbContext>(options =>
 
 builder.Services.AddScoped<ITransactionRepository, SqlTransactionRepository>();
 builder.Services.AddScoped<IAlertRepository, SqlAlertRepository>();
+builder.Services.AddScoped<IScoringSubmissionStore, SqlScoringSubmissionStore>();
+builder.Services.AddSingleton<IFraudScoringQueue, FraudScoringQueue>();
 builder.Services.AddScoped<IFraudRiskModelEngine, PredictiveFraudModelEngine>();
 builder.Services.AddScoped<IAiPredictionService, AiPredictionService>();
 builder.Services.AddScoped<IFraudScoringService, FraudScoringService>();
 builder.Services.AddScoped<IAlertService, AlertService>();
 builder.Services.AddScoped<IReportingService, ReportingService>();
+builder.Services.AddHostedService<FraudScoringBackgroundService>();
 
 var app = builder.Build();
 

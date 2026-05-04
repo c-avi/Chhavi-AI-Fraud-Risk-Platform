@@ -9,6 +9,9 @@ public sealed class InMemoryTransactionRepository : ITransactionRepository
     private readonly Lock _sync = new();
     private int _nextTransactionId = 1;
 
+    private static bool IsSettled(Transaction transaction) =>
+        transaction.ScoringStatus == TransactionScoringStatus.Completed;
+
     public Task<Transaction?> GetByIdAsync(int transactionId, CancellationToken cancellationToken = default)
     {
         cancellationToken.ThrowIfCancellationRequested();
@@ -34,7 +37,10 @@ public sealed class InMemoryTransactionRepository : ITransactionRepository
                 return Task.FromResult<Transaction?>(null);
             }
 
-            var lastTransaction = entries.MaxBy(transaction => transaction.Timestamp);
+            var settled = entries.Where(IsSettled).ToList();
+            var lastTransaction = settled.Count == 0
+                ? null
+                : settled.MaxBy(transaction => transaction.Timestamp);
             return Task.FromResult(lastTransaction);
         }
     }
@@ -51,6 +57,7 @@ public sealed class InMemoryTransactionRepository : ITransactionRepository
             var transactions = _transactionsByUser.Values
                 .SelectMany(entries => entries)
                 .Where(transaction =>
+                    IsSettled(transaction) &&
                     (!fromTimestamp.HasValue || transaction.Timestamp >= fromTimestamp.Value) &&
                     (!toTimestamp.HasValue || transaction.Timestamp <= toTimestamp.Value))
                 .OrderByDescending(transaction => transaction.Timestamp)
@@ -77,6 +84,7 @@ public sealed class InMemoryTransactionRepository : ITransactionRepository
             var transactions = _transactionsByUser.Values
                 .SelectMany(entries => entries)
                 .Where(transaction =>
+                    IsSettled(transaction) &&
                     (!fromTimestamp.HasValue || transaction.Timestamp >= fromTimestamp.Value) &&
                     (!toTimestamp.HasValue || transaction.Timestamp <= toTimestamp.Value) &&
                     (normalizedRiskLevel is null ||
@@ -104,6 +112,7 @@ public sealed class InMemoryTransactionRepository : ITransactionRepository
             }
 
             var count = entries.Count(transaction =>
+                IsSettled(transaction) &&
                 transaction.Timestamp >= fromTimestamp &&
                 transaction.Timestamp <= toTimestamp);
 
@@ -127,7 +136,10 @@ public sealed class InMemoryTransactionRepository : ITransactionRepository
             }
 
             var matchingEntries = entries
-                .Where(transaction => transaction.Timestamp >= fromTimestamp && transaction.Timestamp <= toTimestamp)
+                .Where(transaction =>
+                    IsSettled(transaction) &&
+                    transaction.Timestamp >= fromTimestamp &&
+                    transaction.Timestamp <= toTimestamp)
                 .ToArray();
 
             if (matchingEntries.Length == 0)
@@ -155,7 +167,10 @@ public sealed class InMemoryTransactionRepository : ITransactionRepository
             }
 
             var count = entries
-                .Where(transaction => transaction.Timestamp >= fromTimestamp && transaction.Timestamp <= toTimestamp)
+                .Where(transaction =>
+                    IsSettled(transaction) &&
+                    transaction.Timestamp >= fromTimestamp &&
+                    transaction.Timestamp <= toTimestamp)
                 .Select(transaction => transaction.Location)
                 .Distinct(StringComparer.OrdinalIgnoreCase)
                 .Count();
@@ -170,15 +185,18 @@ public sealed class InMemoryTransactionRepository : ITransactionRepository
 
         lock (_sync)
         {
-            var allTransactions = _transactionsByUser.Values.SelectMany(entries => entries).ToArray();
+            var settled = _transactionsByUser.Values
+                .SelectMany(entries => entries)
+                .Where(IsSettled)
+                .ToArray();
 
             return Task.FromResult(new RiskSummaryResponse
             {
-                TotalTransactionsProcessed = allTransactions.Length,
-                HighRiskAlertsCount = allTransactions.Count(transaction => string.Equals(transaction.RiskLevel, "High", StringComparison.OrdinalIgnoreCase)),
-                AverageFraudRiskScore = allTransactions.Length == 0
+                TotalTransactionsProcessed = settled.Length,
+                HighRiskAlertsCount = settled.Count(transaction => string.Equals(transaction.RiskLevel, "High", StringComparison.OrdinalIgnoreCase)),
+                AverageFraudRiskScore = settled.Length == 0
                     ? 0m
-                    : decimal.Round((decimal)allTransactions.Average(transaction => transaction.RiskScore), 1)
+                    : decimal.Round((decimal)settled.Average(transaction => transaction.RiskScore), 1)
             });
         }
     }
@@ -191,6 +209,7 @@ public sealed class InMemoryTransactionRepository : ITransactionRepository
         {
             var transactions = _transactionsByUser.Values
                 .SelectMany(entries => entries)
+                .Where(IsSettled)
                 .OrderByDescending(transaction => transaction.Timestamp)
                 .Take(limit)
                 .ToArray();
@@ -220,5 +239,44 @@ public sealed class InMemoryTransactionRepository : ITransactionRepository
         }
 
         return Task.CompletedTask;
+    }
+
+    public Task UpdateAsync(Transaction transaction, CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+
+        lock (_sync)
+        {
+            foreach (var entries in _transactionsByUser.Values)
+            {
+                var index = entries.FindIndex(t => t.TransactionId == transaction.TransactionId);
+                if (index >= 0)
+                {
+                    entries[index] = transaction;
+                    return Task.CompletedTask;
+                }
+            }
+        }
+
+        throw new KeyNotFoundException($"Transaction {transaction.TransactionId} was not found for update.");
+    }
+
+    public Task<IReadOnlyList<int>> GetPendingTransactionIdsAsync(int take, CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        var normalizedTake = Math.Clamp(take, 1, 10_000);
+
+        lock (_sync)
+        {
+            var ids = _transactionsByUser.Values
+                .SelectMany(entries => entries)
+                .Where(t => t.ScoringStatus == TransactionScoringStatus.Pending)
+                .OrderBy(t => t.TransactionId)
+                .Take(normalizedTake)
+                .Select(t => t.TransactionId)
+                .ToArray();
+
+            return Task.FromResult<IReadOnlyList<int>>(ids);
+        }
     }
 }

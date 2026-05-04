@@ -61,7 +61,9 @@ public sealed class ReportingService : IReportingService
             Location = transaction.Location,
             Timestamp = transaction.Timestamp,
             RiskScore = transaction.RiskScore,
-            RiskLevel = transaction.RiskLevel
+            RiskLevel = transaction.RiskLevel,
+            ScoringStatus = transaction.ScoringStatus.ToString(),
+            ScoringError = transaction.ScoringError
         };
     }
 }

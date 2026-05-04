@@ -80,6 +80,21 @@ public sealed class AiPredictionServiceTests
                 RiskLevel = _riskLevel
             });
         }
+
+        public FraudFeatureSet GetAuditFeatureSet(FraudRiskContext context) =>
+            new()
+            {
+                NormalizedAmount = 0f,
+                AmountToAverageRatio = 0f,
+                RecentTransactionCount = 0,
+                DistinctLocationCount = 0,
+                LocationChangedSinceLast = false,
+                GeoVelocity = new GeoVelocitySnapshot
+                {
+                    DistinctLocationsInWindow = 0,
+                    LocationChangedSinceLastTransaction = false
+                }
+            };
     }
 }
 

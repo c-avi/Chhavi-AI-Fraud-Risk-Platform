@@ -54,6 +54,21 @@ public sealed class AiControllerIntegrationTests
                 RiskLevel = "High"
             });
         }
+
+        public FraudFeatureSet GetAuditFeatureSet(FraudRiskContext context) =>
+            new()
+            {
+                NormalizedAmount = 0.5f,
+                AmountToAverageRatio = 1f,
+                RecentTransactionCount = 0,
+                DistinctLocationCount = 0,
+                LocationChangedSinceLast = false,
+                GeoVelocity = new GeoVelocitySnapshot
+                {
+                    DistinctLocationsInWindow = 0,
+                    LocationChangedSinceLastTransaction = false
+                }
+            };
     }
 }
 

@@ -7,4 +7,5 @@ public sealed class AlertResponse
     public int RiskScore { get; init; }
     public string Message { get; init; } = string.Empty;
     public DateTime CreatedAt { get; init; }
+    public string? FeatureSetJson { get; init; }
 }
