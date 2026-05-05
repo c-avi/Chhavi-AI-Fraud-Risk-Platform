@@ -7,8 +7,11 @@ export interface Alert {
   id: number;
   transactionId: number;
   riskScore: number;
+  riskLevel: 'Low' | 'Medium' | 'High' | string;
   message: string;
   createdAt: string;
+  riskIndicators: string[];
+  featureSetJson?: string | null;
 }
 
 @Injectable({

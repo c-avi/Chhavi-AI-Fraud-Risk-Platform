@@ -66,6 +66,16 @@
   color: #9db5ca;
 }
 
+.risk-indicators {
+  margin: 0.5rem 0 0;
+  padding-left: 1rem;
+  color: #c5d8ea;
+}
+
+.risk-indicators li {
+  margin-top: 0.2rem;
+}
+
 .alert-error {
   color: #ffb6b6;
 }

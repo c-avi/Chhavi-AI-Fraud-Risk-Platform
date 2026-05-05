@@ -20,14 +20,21 @@
           <div class="risk-meter-track" role="progressbar" [attr.aria-valuenow]="alert.riskScore" aria-valuemin="0" aria-valuemax="100">
             <span
               class="risk-meter-fill"
-              [class]=" 'risk-meter-fill ' + riskMeterClass(alert.riskScore)"
+              [class]=" 'risk-meter-fill ' + (alert.riskLevel | lowercase)"
               [style.width.%]="alert.riskScore">
             </span>
           </div>
+          @if (alert.riskIndicators.length) {
+            <ul class="risk-indicators">
+              @for (indicator of alert.riskIndicators; track indicator) {
+                <li>Reason: {{ indicator }}</li>
+              }
+            </ul>
+          }
         </div>
         <div class="alert-meta">
-          <span class="score-pill" [class]=" 'score-pill ' + scoreClass(alert.riskScore)">{{ alert.riskScore }}</span>
-          <p>High Risk</p>
+          <span class="score-pill" [class]=" 'score-pill ' + (alert.riskLevel | lowercase)">{{ alert.riskScore }}</span>
+          <p>{{ alert.riskLevel }} Risk</p>
         </div>
       </article>
     } @empty {
