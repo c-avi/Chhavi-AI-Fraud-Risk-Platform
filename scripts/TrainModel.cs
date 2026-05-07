@@ -5,18 +5,18 @@ var mlContext = new MLContext(seed: 42);
 
 var rawRows = new List<RawFraudRow>
 {
-    new() { Amount = 40, RecentCount = 1, Location = "Home", Label = false },
-    new() { Amount = 120, RecentCount = 2, Location = "Home", Label = false },
-    new() { Amount = 250, RecentCount = 2, Location = "Office", Label = false },
-    new() { Amount = 400, RecentCount = 3, Location = "Office", Label = false },
-    new() { Amount = 850, RecentCount = 4, Location = "Travel", Label = true },
-    new() { Amount = 1200, RecentCount = 5, Location = "Travel", Label = true },
-    new() { Amount = 1800, RecentCount = 6, Location = "Unknown", Label = true },
-    new() { Amount = 2300, RecentCount = 7, Location = "Unknown", Label = true },
-    new() { Amount = 520, RecentCount = 3, Location = "Home", Label = false },
-    new() { Amount = 1600, RecentCount = 6, Location = "Abroad", Label = true },
-    new() { Amount = 90, RecentCount = 1, Location = "Office", Label = false },
-    new() { Amount = 2100, RecentCount = 8, Location = "Abroad", Label = true }
+    new() { Amount = 40, RecentCount = 1, DistinctLocationCount = 1, LastLocation = "Home", Location = "Home", Label = false },
+    new() { Amount = 120, RecentCount = 2, DistinctLocationCount = 1, LastLocation = "Home", Location = "Home", Label = false },
+    new() { Amount = 250, RecentCount = 2, DistinctLocationCount = 2, LastLocation = "Home", Location = "Office", Label = false },
+    new() { Amount = 400, RecentCount = 3, DistinctLocationCount = 2, LastLocation = "Office", Location = "Office", Label = false },
+    new() { Amount = 850, RecentCount = 4, DistinctLocationCount = 3, LastLocation = "Office", Location = "Travel", Label = true },
+    new() { Amount = 1200, RecentCount = 5, DistinctLocationCount = 3, LastLocation = "Travel", Location = "Travel", Label = true },
+    new() { Amount = 1800, RecentCount = 6, DistinctLocationCount = 4, LastLocation = "Travel", Location = "Unknown", Label = true },
+    new() { Amount = 2300, RecentCount = 7, DistinctLocationCount = 4, LastLocation = "Unknown", Location = "Unknown", Label = true },
+    new() { Amount = 520, RecentCount = 3, DistinctLocationCount = 1, LastLocation = "Home", Location = "Home", Label = false },
+    new() { Amount = 1600, RecentCount = 6, DistinctLocationCount = 5, LastLocation = "Unknown", Location = "Abroad", Label = true },
+    new() { Amount = 90, RecentCount = 1, DistinctLocationCount = 2, LastLocation = "Home", Location = "Office", Label = false },
+    new() { Amount = 2100, RecentCount = 8, DistinctLocationCount = 5, LastLocation = "Abroad", Location = "Abroad", Label = true }
 };
 
 var trainingRows = rawRows.Select(ToTrainingRow).ToList();
@@ -34,11 +34,14 @@ var pipeline = mlContext.Transforms.Concatenate(
         {
             LabelColumnName = nameof(TrainingFraudRow.Label),
             FeatureColumnName = "Features",
-            NumberOfLeaves = 16,
+            NumberOfLeaves = 8,
             NumberOfTrees = 100,
-            MinimumExampleCountPerLeaf = 1,
+            MinimumExampleCountPerLeaf = 12,
             LearningRate = 0.2
-        }));
+        }))
+    .Append(mlContext.BinaryClassification.Calibrators.Platt(
+        labelColumnName: nameof(TrainingFraudRow.Label),
+        scoreColumnName: "Score"));
 
 var model = pipeline.Fit(trainingData);
 
@@ -70,26 +73,14 @@ static string ResolveRepoRoot()
 
 static TrainingFraudRow ToTrainingRow(RawFraudRow row)
 {
-    var normalizedAmount = Math.Clamp(row.Amount / 2500f, 0f, 1f);
-    var amountToAverageRatio = Math.Clamp(row.Amount / 600f, 0f, 5f);
+    var normalizedAmount = ApplyLogCompression(Math.Clamp(row.Amount / 2500f, 0f, 1f));
+    var amountToAverageRatio = ApplyLogCompression(MathF.Max(0f, row.Amount / 600f));
     var recentTransactionCount = Math.Clamp(row.RecentCount, 0f, 10f);
-
-    var locationRiskMap = new Dictionary<string, float>(StringComparer.OrdinalIgnoreCase)
-    {
-        ["Home"] = 1f,
-        ["Office"] = 1f,
-        ["Travel"] = 2f,
-        ["Unknown"] = 3f,
-        ["Abroad"] = 4f
-    };
-
-    locationRiskMap.TryGetValue(row.Location, out var distinctLocationCount);
-    if (distinctLocationCount <= 0f)
-    {
-        distinctLocationCount = 2f;
-    }
-
-    var isLocationChanged = string.Equals(row.Location, "Home", StringComparison.OrdinalIgnoreCase) ? 0f : 1f;
+    var distinctLocationCount = ApplyLaplaceLocationSmoothing(row.DistinctLocationCount);
+    var hasLocationChanged = !string.Equals(row.LastLocation, row.Location, StringComparison.OrdinalIgnoreCase);
+    var isLocationChanged = hasLocationChanged
+        ? GetLocationChangeWeight(row.DistinctLocationCount)
+        : 0f;
 
     return new TrainingFraudRow
     {
@@ -102,10 +93,33 @@ static TrainingFraudRow ToTrainingRow(RawFraudRow row)
     };
 }
 
+static float ApplyLogCompression(float value)
+{
+    var safe = MathF.Max(0f, value);
+    // log1p compression dampens outliers while preserving ordering.
+    return MathF.Log(1f + safe);
+}
+
+static float ApplyLaplaceLocationSmoothing(float distinctLocationCount)
+{
+    const float pseudoCount = 1f;
+    const float pseudoWindow = 2f;
+    var safeCount = MathF.Max(0f, distinctLocationCount);
+    return (safeCount + pseudoCount) / (1f + pseudoWindow);
+}
+
+static float GetLocationChangeWeight(float distinctLocationCount)
+{
+    var safeCount = MathF.Max(0f, distinctLocationCount);
+    return safeCount <= 1f ? 0.45f : 1f;
+}
+
 file sealed class RawFraudRow
 {
     public float Amount { get; init; }
     public float RecentCount { get; init; }
+    public float DistinctLocationCount { get; init; }
+    public required string LastLocation { get; init; }
     public required string Location { get; init; }
     public bool Label { get; init; }
 }

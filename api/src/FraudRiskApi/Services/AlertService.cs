@@ -63,7 +63,7 @@ public sealed class AlertService : IAlertService
                 RiskLevel = ResolveRiskLevel(alert.RiskScore),
                 Message = alert.Message,
                 CreatedAt = alert.CreatedAt,
-                RiskIndicators = BuildRiskIndicators(alert.FeatureSetJson),
+                RiskIndicators = BuildRiskIndicators(alert.RiskScore, alert.FeatureSetJson),
                 FeatureSetJson = alert.FeatureSetJson
             })
             .ToArray();
@@ -77,7 +77,7 @@ public sealed class AlertService : IAlertService
             _ => "Low"
         };
 
-    private static IReadOnlyList<string> BuildRiskIndicators(string? featureSetJson)
+    private static IReadOnlyList<string> BuildRiskIndicators(int riskScore, string? featureSetJson)
     {
         if (string.IsNullOrWhiteSpace(featureSetJson))
         {
@@ -99,7 +99,12 @@ public sealed class AlertService : IAlertService
             return new[] { "Model flagged composite anomaly pattern." };
         }
 
-        var indicators = new List<string>(4);
+        var indicators = new List<string>(5);
+
+        if (riskScore is >= 40 and < 70)
+        {
+            indicators.Add("Medium Risk Pattern (40%-70%)");
+        }
 
         if (features.LocationChangedSinceLast || features.GeoVelocity.LocationChangedSinceLastTransaction)
         {

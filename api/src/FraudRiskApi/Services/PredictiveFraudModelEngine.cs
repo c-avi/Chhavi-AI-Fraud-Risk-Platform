@@ -96,16 +96,19 @@ public sealed class PredictiveFraudModelEngine : IFraudRiskModelEngine
     private FraudModelInput BuildModelInput(FraudRiskContext context)
     {
         var amountScale = Math.Max((float)context.HistoricalAverageAmount * 4f, 20_000f);
-        var normalizedAmount = NormalizeAmount((float)context.Amount, amountScale);
-        var amountToAverageRatio = GetAmountRatio((float)context.Amount, (float)context.HistoricalAverageAmount);
-        var isLocationChanged = HasLocationChanged(context) ? 1f : 0f;
+        var normalizedAmount = ApplyLogCompression(NormalizeAmount((float)context.Amount, amountScale));
+        var amountToAverageRatio = ApplyLogCompression(GetAmountRatio((float)context.Amount, (float)context.HistoricalAverageAmount));
+        var smoothedDistinctLocationCount = ApplyLaplaceLocationSmoothing(context.DistinctLocationCount);
+        var isLocationChanged = HasLocationChanged(context)
+            ? GetLocationChangeWeight(context.DistinctLocationCount)
+            : 0f;
 
         return new FraudModelInput
         {
             NormalizedAmount = normalizedAmount,
             AmountToAverageRatio = amountToAverageRatio,
             RecentTransactionCount = Math.Max(0, context.RecentTransactionCount),
-            DistinctLocationCount = Math.Max(0, context.DistinctLocationCount),
+            DistinctLocationCount = smoothedDistinctLocationCount,
             IsLocationChanged = isLocationChanged
         };
     }
@@ -194,6 +197,26 @@ public sealed class PredictiveFraudModelEngine : IFraudRiskModelEngine
         }
 
         return MathF.Max(0f, amount / historicalAverageAmount);
+    }
+
+    private static float ApplyLogCompression(float value)
+    {
+        var safe = MathF.Max(0f, value);
+        return MathF.Log(1f + safe);
+    }
+
+    private static float ApplyLaplaceLocationSmoothing(int distinctLocationCount)
+    {
+        const float pseudoCount = 1f;
+        const float pseudoWindow = 2f;
+        var safeCount = MathF.Max(0f, distinctLocationCount);
+        return (safeCount + pseudoCount) / (1f + pseudoWindow);
+    }
+
+    private static float GetLocationChangeWeight(int distinctLocationCount)
+    {
+        var safeCount = Math.Max(0, distinctLocationCount);
+        return safeCount <= 1 ? 0.45f : 1f;
     }
 
     private static bool HasLocationChanged(FraudRiskContext context)
