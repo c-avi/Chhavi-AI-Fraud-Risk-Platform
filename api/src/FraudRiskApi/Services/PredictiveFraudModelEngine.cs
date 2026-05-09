@@ -7,6 +7,9 @@ namespace FraudRiskApi.Services;
 public sealed class PredictiveFraudModelEngine : IFraudRiskModelEngine
 {
     private const int ErrorScore = -1;
+    private const float AmountLogSensitivityMultiplier = 1.5f;
+    private const float LocationSmoothingAlpha = 0.5f;
+    private const float NewLocationChangeWeight = 0.65f;
     private readonly string _modelArtifactPath;
     private readonly bool _isModelLoaded;
     private readonly ILogger<PredictiveFraudModelEngine> _logger;
@@ -202,13 +205,13 @@ public sealed class PredictiveFraudModelEngine : IFraudRiskModelEngine
     private static float ApplyLogCompression(float value)
     {
         var safe = MathF.Max(0f, value);
-        return MathF.Log(1f + safe);
+        return MathF.Log(1f + safe) * AmountLogSensitivityMultiplier;
     }
 
     private static float ApplyLaplaceLocationSmoothing(int distinctLocationCount)
     {
-        const float pseudoCount = 1f;
-        const float pseudoWindow = 2f;
+        const float pseudoCount = LocationSmoothingAlpha;
+        const float pseudoWindow = LocationSmoothingAlpha * 2f;
         var safeCount = MathF.Max(0f, distinctLocationCount);
         return (safeCount + pseudoCount) / (1f + pseudoWindow);
     }
@@ -216,7 +219,7 @@ public sealed class PredictiveFraudModelEngine : IFraudRiskModelEngine
     private static float GetLocationChangeWeight(int distinctLocationCount)
     {
         var safeCount = Math.Max(0, distinctLocationCount);
-        return safeCount <= 1 ? 0.45f : 1f;
+        return safeCount <= 1 ? NewLocationChangeWeight : 1f;
     }
 
     private static bool HasLocationChanged(FraudRiskContext context)

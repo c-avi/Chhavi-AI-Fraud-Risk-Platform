@@ -96,14 +96,14 @@ static TrainingFraudRow ToTrainingRow(RawFraudRow row)
 static float ApplyLogCompression(float value)
 {
     var safe = MathF.Max(0f, value);
-    // log1p compression dampens outliers while preserving ordering.
-    return MathF.Log(1f + safe);
+    // Preserve ordering while widening distance between baseline spend and outliers.
+    return MathF.Log(1f + safe) * FeatureEngineeringConstants.AmountLogSensitivityMultiplier;
 }
 
 static float ApplyLaplaceLocationSmoothing(float distinctLocationCount)
 {
-    const float pseudoCount = 1f;
-    const float pseudoWindow = 2f;
+    const float pseudoCount = FeatureEngineeringConstants.LocationSmoothingAlpha;
+    const float pseudoWindow = FeatureEngineeringConstants.LocationSmoothingAlpha * 2f;
     var safeCount = MathF.Max(0f, distinctLocationCount);
     return (safeCount + pseudoCount) / (1f + pseudoWindow);
 }
@@ -111,7 +111,14 @@ static float ApplyLaplaceLocationSmoothing(float distinctLocationCount)
 static float GetLocationChangeWeight(float distinctLocationCount)
 {
     var safeCount = MathF.Max(0f, distinctLocationCount);
-    return safeCount <= 1f ? 0.45f : 1f;
+    return safeCount <= 1f ? FeatureEngineeringConstants.NewLocationChangeWeight : 1f;
+}
+
+file static class FeatureEngineeringConstants
+{
+    public const float AmountLogSensitivityMultiplier = 1.5f;
+    public const float LocationSmoothingAlpha = 0.5f;
+    public const float NewLocationChangeWeight = 0.65f;
 }
 
 file sealed class RawFraudRow
